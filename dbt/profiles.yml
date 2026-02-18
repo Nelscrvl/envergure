@@ -1,0 +1,11 @@
+dbt_envergure:       # doit correspondre au champ "profile:" dans ton dbt_project.yml
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: dynamic-camp-465312-b6
+      dataset: dbt_transfo
+      location: EU
+      threads: 4
+      timeout_seconds: 300

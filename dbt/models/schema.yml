@@ -1,0 +1,26 @@
+version: 2
+
+sources:
+  - name: sie_emploi
+    schema: mysql_data  # Nom du dataset dans BigQuery
+    tables:
+      - name: benef
+        identifier: dt_benef  # Nom exact de la table dans BigQuery
+        description: "Table des bénéficiaires"
+      - name: rdv
+        identifier: dt_rdv
+        description: "table des rendez-vous"
+      - name: facture
+        identifier: dt_facture
+        
+  - name: sofia
+    schema: Extract_Sofia
+    tables: 
+      - name: Presence_Soc_2
+      - name: Presence_Soc_3
+      - name: Presence_Soc_4
+      - name: Inscrite_Soc_2
+      - name: Inscrite_Soc_3
+      - name: Stage_Soc_2
+      - name: Stage_Soc_3
+      - name: entites

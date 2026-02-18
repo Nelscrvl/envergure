@@ -1,0 +1,26 @@
+name: dbt_envergure
+version: 1.0.0
+
+# This setting configures which "profile" dbt uses for this project.
+profile: dbt_envergure
+
+# These configurations specify where dbt should look for different types of files.
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+# Directories to be removed by `dbt clean`
+clean-targets:
+  - target
+  - dbt_packages
+
+# Configuring models
+# Full documentation: https://docs.getdbt.com/docs/configuring-models
+models:
+  dbt_envergure:
+    mart:
+      +schema: sie_emploi
+      +materialized: table 
