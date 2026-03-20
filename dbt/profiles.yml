@@ -8,4 +8,7 @@ dbt_envergure:       # doit correspondre au champ "profile:" dans ton dbt_projec
       dataset: dbt_transfo
       location: EU
       threads: 4
+      scopes:
+        - https://www.googleapis.com/auth/bigquery
+        - https://www.googleapis.com/auth/drive
       timeout_seconds: 300

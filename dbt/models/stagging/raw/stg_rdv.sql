@@ -12,7 +12,11 @@ renamed as (
         format_datetime('%Y-%m-%d %H:%M:%S', date_deb) as date_deb,
         format_datetime('%Y-%m-%d %H:%M:%S', date_fin) as date_fin,
         type,
-        typage,
+        CASE 
+            WHEN LOWER(typage) IN ("entretien de diagnostic","entretien de validation")
+            THEN "Entretien de Diagnostic"
+            ELSE typage
+        END AS typage,
         objet,
         referent,
         id_referent,

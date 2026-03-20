@@ -12,6 +12,11 @@ sources:
         description: "table des rendez-vous"
       - name: facture
         identifier: dt_facture
+  - name: DAF
+    schema: 1_natives # Nom du dataset dans BigQuery
+    tables:
+      - name: BDD_BU_NATIVE
+      - name: BDD_EDM_NATIVE
         
   - name: sofia
     schema: Extract_Sofia
@@ -24,3 +29,13 @@ sources:
       - name: Stage_Soc_2
       - name: Stage_Soc_3
       - name: entites
+
+  - name: prime_raw
+    tables:
+      - name: 16866_CVL
+      - name: 16871_GUAD
+      - name: 16872_GUAD
+      - name: 16873_GUAD
+      - name: 16898_GD_EST
+      - name: 16900_IDF
+      - name: prime_compile_clean
