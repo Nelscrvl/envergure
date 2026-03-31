@@ -52,11 +52,18 @@ tps_travail AS (
 final AS (
     SELECT
         t.*,
+        CASE 
+            WHEN situation = "Reprise d'emploi CDI ou CDD/CTT + de 6 mois + de 78h/mois" AND rang_entree = 1 THEN 1 
+            ELSE 0
+        END AS prime_annonce,
         CASE
             WHEN rang_entree = 1 THEN p.Montant_prime
             ELSE 0
         END AS Montant_prime,
-        p.Date_primes
+        CASE 
+            WHEN p.Date_primes >= "2021-01-01" AND rang_entree = 1 THEN p.Date_primes
+            ELSE NULL
+        END AS Date_primes
     FROM tps_travail AS t
     LEFT JOIN {{ ref("int_prime_clean") }} AS p ON t.id_benef = p.id_benef
 )

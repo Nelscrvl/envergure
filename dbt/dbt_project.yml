@@ -24,5 +24,11 @@ models:
     mart:
       +schema: sie_emploi
       +materialized: table 
+      Pilotage:
+        ATR:
+          +schema: dbt_transfo_ATR
+        UES:
+          +schema: dbt_transfo_sie_emploi
+  
 
 
