@@ -12,11 +12,15 @@ sources:
         description: "table des rendez-vous"
       - name: facture
         identifier: dt_facture
-  - name: DAF
+      - name: pmsmp
+        identifier: dt_pmsmp
+  - name: DAF_Sources
     schema: 1_natives # Nom du dataset dans BigQuery
     tables:
-      - name: BDD_BU_NATIVE
-      - name: BDD_EDM_NATIVE
+      - name: BDD_BU
+        identifier: BDD_BU_NATIVE
+      - name: BDD_EDM
+        identifier: BDD_EDM_NATIVE
         
   - name: sofia
     schema: Extract_Sofia

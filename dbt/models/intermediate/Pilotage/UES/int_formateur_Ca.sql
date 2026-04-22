@@ -25,6 +25,7 @@ f.date_facture,
 f.montant_HT, 
 f.montant_TVA,
 f.num_facture,
+f.numero_commande
 FROM slct_column as s
 LEFT JOIN {{ref("int_facture")}} as f
 ON s.id_benef = f.id_benef

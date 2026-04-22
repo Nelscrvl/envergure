@@ -37,7 +37,7 @@ GCP_PROJECT_ID = 'dynamic-camp-465312-b6'
 sofia_config = {
         'api': {
             'base_url': 'https://envergure.sc-form.net',  
-            'username': 'nelson@avdata.fr',              
+            'username': 'nelson@avdata',              
             'password': "EGMKQ6WmpxZnMRQ@"              
         },
         'bq': {

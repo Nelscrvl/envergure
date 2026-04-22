@@ -29,6 +29,11 @@ models:
           +schema: dbt_transfo_ATR
         UES:
           +schema: dbt_transfo_sie_emploi
+        CA_Global:
+          +schema: dbt_transfo_ca_pilotage
+        AP3: 
+          +schema: dbt_transfo_AP3
+          
   
 
 

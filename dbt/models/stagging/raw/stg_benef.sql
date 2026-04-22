@@ -61,6 +61,7 @@ renamed as (
         emargement_impossible,
         prime,
         modalite_accompagnement,
+        id_presta_coll,
         _extracted_at
 
     from source

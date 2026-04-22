@@ -21,6 +21,7 @@ id_site,
 organisme,
 statut,
 situation,
+id_presta_coll,
 CASE 
     WHEN statut IN("Demande sans suite","Ne s'est pas présenté") THEN 0
     ELSE 1
@@ -65,9 +66,10 @@ END AS recu,
 
 FROM jointure
 
-)
+),
 
-SELECT
+creation_rang AS (
+    SELECT
 *,
 CASE
     WHEN duree_seance > 3 AND recu = 1  THEN "longue"
@@ -82,6 +84,62 @@ CASE
     WHEN statut = "Annulé" THEN "Annulé"
     ELSE "Réalisé"
 END AS type_session,
-EXTRACT(MONTH FROM CAST(date_deb AS TIMESTAMP)) AS mois_num
+EXTRACT(MONTH FROM CAST(date_deb AS TIMESTAMP)) AS mois_num,
+ROW_NUMBER() OVER (
+            PARTITION BY numero_commande
+            ORDER BY date_deb ASC
+        ) AS rang_entree,
 FROM KPI
-ORDER BY date_deb ASC
+
+),
+
+facture_dedup AS (
+    SELECT id_presta_coll, MAX(date_facture) AS date_facture, MAX(montant_HT) AS montant_HT
+    FROM {{ref('stg_facture')}}
+    GROUP BY id_presta_coll
+),
+
+jointure_facture AS (
+    SELECT
+    c.*,
+    f.date_facture,
+    CASE
+        WHEN rang_entree = 1 THEN f.montant_HT
+        ELSE 0
+    END AS ca_atelier
+    FROM creation_rang AS c
+    LEFT JOIN facture_dedup AS f
+    ON c.id_presta_coll = f.id_presta_coll
+)
+
+--final AS (
+
+SELECT
+*,
+MAX(ca_atelier) OVER (PARTITION BY numero_commande) / NULLIF(MAX(rang_entree) OVER (PARTITION BY numero_commande), 0) AS ca_atelier_par_benef,
+CASE
+    WHEN numero_commande <> ""
+    AND rang_entree = MIN(CASE WHEN type_atelier IN ("longue","courte") OR ca_atelier > 0 THEN rang_entree ELSE NULL END) OVER (PARTITION BY numero_commande)
+    AND (type_atelier IN ("longue","courte") OR ca_atelier > 0) THEN 1
+    ELSE 0
+END AS nb_atelier_real,
+CASE
+    WHEN date_demarrage <= CURRENT_DATE -2 AND statut ="Convoqué" THEN 1
+    ELSE 0
+END AS statut_pas_a_jour
+FROM jointure_facture
+
+
+-- TEST 1 : comparaison des counts entre creation_rang et jointure_facture
+-- SELECT 'creation_rang' AS source, COUNT(*) AS nb FROM creation_rang
+-- UNION ALL
+-- SELECT 'jointure_facture' AS source, COUNT(*) AS nb FROM jointure_facture
+
+-- TEST 2 : résultat final
+--SELECT
+
+--COUNT(DISTINCT numero_commande)
+--SUM(ca_atelier)
+--SUM(nb_atelier_real)
+--FROM final
+--WHERE organisme = "ENVERGURE" AND FORMAT_TIMESTAMP('%Y-%m', CAST(date_demarrage AS TIMESTAMP)) = "2026-03"  AND marche ="ATR"

@@ -30,6 +30,7 @@ prime AS (
 SELECT
     ca.*,
     p.Montant_prime,
-    p.Date_primes
+    p.Date_primes,
+    EXTRACT(MONTH FROM CAST(date_facture AS TIMESTAMP)) AS mois_num
 FROM ca
 LEFT JOIN prime AS p ON ca.id_benef = p.id_benef
