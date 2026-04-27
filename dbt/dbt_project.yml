@@ -32,8 +32,5 @@ models:
         CA_Global:
           +schema: dbt_transfo_ca_pilotage
         AP3: 
-          +schema: dbt_transfo_AP3
+          +schema: dbt_transfo_AP3  
           
-  
-
-
