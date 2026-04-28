@@ -3,12 +3,15 @@
     "bigquery": {
       "type": "stdio",
       "command": "toolbox",
-      "args": ["--project=dynamic-camp-465312-b6"]
+      "args": ["--prebuilt", "bigquery", "--stdio"],
+      "env": {
+        "BIGQUERY_PROJECT": "dynamic-camp-465312-b6"
+      }
     },
     "dbt": {
       "type": "stdio",
-      "command": "/Users/bertrand/.venvs/dbt-mcp/bin/python",
-      "args": ["-m", "dbt_mcp"],
+      "command": "/Users/bertrand/.venvs/dbt-mcp/bin/dbt-mcp",
+      "args": [],
       "env": {
         "DBT_PROJECT_DIR": "/Users/bertrand/dev/envergure/dbt",
         "DBT_PROFILES_DIR": "/Users/bertrand/.dbt",
