@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "bigquery": {
+      "type": "stdio",
+      "command": "toolbox",
+      "args": ["--project=dynamic-camp-465312-b6"]
+    },
+    "dbt": {
+      "type": "stdio",
+      "command": "/Users/bertrand/.venvs/dbt-mcp/bin/python",
+      "args": ["-m", "dbt_mcp"],
+      "env": {
+        "DBT_PROJECT_DIR": "/Users/bertrand/dev/envergure/dbt",
+        "DBT_PROFILES_DIR": "/Users/bertrand/.dbt",
+        "DBT_PATH": "/Users/bertrand/dev/envergure/.venv/bin/dbt"
+      }
+    }
+  }
+}
