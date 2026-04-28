@@ -21,9 +21,12 @@ clean-targets:
 # Full documentation: https://docs.getdbt.com/docs/configuring-models
 models:
   dbt_envergure:
+    intermediate:
+      DAF:
+        +materialized: table
     mart:
       +schema: sie_emploi
-      +materialized: table 
+      +materialized: table
       Pilotage:
         ATR:
           +schema: dbt_transfo_ATR
@@ -31,6 +34,6 @@ models:
           +schema: dbt_transfo_sie_emploi
         CA_Global:
           +schema: dbt_transfo_ca_pilotage
-        AP3: 
-          +schema: dbt_transfo_AP3  
+        AP3:
+          +schema: dbt_transfo_AP3
           

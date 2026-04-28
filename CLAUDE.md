@@ -23,13 +23,35 @@ BEN17_R2026, BEN17_REF_MARCHE).
 
 Le projet utilise un override `generate_schema_name` (`macros/generate_schema_name.sql`) qui prend `+schema` tel quel — donc `+schema: 2_mart` → dataset `2_mart` (pas de préfixe environnement).
 
+## Arborescence des fichiers
+
+```
+dbt/models/
+├── intermediate/DAF/
+│   ├── _schema.yml          ← tests des 9 ESO_/ENV_
+│   ├── ESO_CA.sql, ESO_FDG.sql, ESO_MS_PROD.sql, ESO_SS_TRAITANT.sql
+│   ├── ENV_CA.sql, ENV_FDG.sql, ENV_CA_MANDAT.sql, ENV_MS_PROD.sql, ENV_SS_TRAITANT.sql
+│   └── int_BDD_*.sql        (legacy)
+└── mart/DAF/
+    ├── _schema.yml          ← tests des 8 MRT_*
+    ├── MRT_CA.sql, MRT_FDG.sql, MRT_MS_PROD.sql, MRT_SS_TRAITANT.sql
+    ├── MRT_CA_MANDAT.sql, MRT_MB.sql, MRT_CSR.sql, MRT_BDD_EDM.sql
+    └── mrt_BDD_*.sql, BDD_BU_SECURE.sql  (legacy)
+```
+
+**Règle d'arborescence** : un modèle qui matérialise dans `2_intermediate` vit dans `models/intermediate/DAF/`, un modèle qui matérialise dans `2_mart` vit dans `models/mart/DAF/`. Cohérence physique = cohérence logique.
+
+`dbt_project.yml` config :
+- `models.dbt_envergure.intermediate.DAF.+materialized: table` (sinon défaut = view)
+- `models.dbt_envergure.mart.+materialized: table`
+
 ## Conventions de nommage
 
 - **`ESO_*`** (UPPERCASE) : intermediate, source BEN17 (Sud-Ouest)
 - **`ENV_*`** (UPPERCASE) : intermediate, source Envergure (book_2026, CUBA, ENV_SS_TRAITANCE)
 - **`MRT_*`** (UPPERCASE) : mart consolidé user-facing
-- `mrt_*` (lowercase) : modèles legacy existants (`mrt_BDD_FY`, `mrt_BDD_LY_CY`) — pas touchés
-- Anciens seeds CSV `seed_*.csv` dans `dbt/seeds/`
+- `mrt_*` (lowercase) : modèles legacy existants (`mrt_BDD_FY`, `mrt_BDD_LY_CY`, `int_BDD_*`) — pas touchés
+- Seeds CSV `seed_*.csv` dans `dbt/seeds/`
 
 ## Schéma commun des modèles métriques (intermediate + MRT)
 
@@ -60,6 +82,27 @@ Conséquence : un total exclut les familles qui n'ont pas de code spécifique da
 ```sql
 WHERE NOT (code_rubrique = 'CXXX' AND famille IN ('D', ...))
 ```
+
+### MS Prod chargée — taux de chargement 1.45
+Les sources fournissent la **MS Prod NON chargée** :
+- `BEN17_R2026.ms_prod_non_chargee` (ESO)
+- `CUBA_MS_PROD.ms_2026_NN` (ENV)
+
+Les intermediates **`ESO_MS_PROD` et `ENV_MS_PROD`** appliquent un taux de chargement RH de **× 1.45** dans la CTE `agg` (`SUM(...) * 1.45 AS valeur`) pour refléter le coût complet (cotisations, charges sociales). Tous les modèles aval (`MRT_MS_PROD`, `MRT_MB`, `MRT_CSR`, `MRT_BDD_EDM`) consomment cette valeur **chargée**.
+
+Si le taux change (négociation RH, etc.), le modifier au même endroit dans les 2 intermediates. À termiser éventuellement en `var('ms_prod_loading_factor', 1.45)` dans `dbt_project.yml` si le taux devient discuté/variant.
+
+### Pas de lignes nulles ou zéro
+Chaque intermediate et chaque MRT filtrent en sortie `WHERE valeur IS NOT NULL AND valeur != 0` (ou `HAVING` équivalent dans une CTE wrap). Conséquence : les modèles ne contiennent QUE des lignes porteuses d'information. Pour les MRT consolidés, le pattern est :
+```sql
+agg AS (
+  SELECT ..., SUM(valeur) AS valeur
+  FROM unioned
+  GROUP BY ...
+)
+SELECT * FROM agg WHERE valeur IS NOT NULL AND valeur != 0
+```
+(éviter `HAVING SUM(valeur)` qui crée le bug "aggregations of aggregations" en BQ à cause du conflit d'alias).
 
 ## Mapping rubriques par métrique
 
@@ -109,10 +152,10 @@ dbt seed
 ## Comment étendre
 
 **Ajouter une nouvelle métrique** (ex: nouveau type de coût) :
-1. Créer `2_intermediate/ENV_NEW.sql` (et `ESO_NEW.sql` si concerné) — pattern identique aux existants, en utilisant `clean_numeric` + `expand_rubriques`
-2. Créer `MRT_NEW.sql` (UNION ENV + ESO + GROUP BY)
+1. Créer `models/intermediate/DAF/ENV_NEW.sql` (et `ESO_NEW.sql` si concerné) avec `{{ config(schema='2_intermediate') }}` + macros `clean_numeric` + `expand_rubriques`
+2. Créer `models/mart/DAF/MRT_NEW.sql` avec `{{ config(schema='2_mart') }}`, pattern UNION ENV + ESO → CTE `agg` → `WHERE valeur IS NOT NULL AND valeur != 0`
 3. Ajouter UNION ALL dans `MRT_BDD_EDM.fact`
-4. Documenter dans `_schema.yml` avec `accepted_values` sur `code_rubrique`
+4. Documenter dans `models/intermediate/DAF/_schema.yml` (intermediate) et `models/mart/DAF/_schema.yml` (MRT) avec `accepted_values` sur `code_rubrique` + `unique_combination_of_columns` sur les MRT
 
 **Ajouter une nouvelle rubrique à une métrique existante** (cas typique : nouveau code rubrique dans REF_RUBRIQUES) :
 1. Ajouter la ligne dans le `mapping` de `expand_rubriques` du modèle source
