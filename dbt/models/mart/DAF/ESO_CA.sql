@@ -48,3 +48,4 @@ expanded AS (
 SELECT * FROM expanded
 -- C110 (CA total) exclut les codifs Divers — C602 reste leur seule rubrique
 WHERE NOT (code_rubrique = 'C110' AND famille = 'D')
+  AND valeur IS NOT NULL AND valeur != 0

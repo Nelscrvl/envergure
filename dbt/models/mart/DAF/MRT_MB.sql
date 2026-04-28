@@ -44,6 +44,7 @@ SELECT
   'C127' AS code_rubrique,
   ca_total - msp_total - fdg_total - sst_total AS valeur
 FROM per_codif
+WHERE ca_total - msp_total - fdg_total - sst_total != 0
 
 UNION ALL
 
@@ -58,3 +59,4 @@ SELECT
   ca_famille - msp_famille - fdg_famille - sst_famille AS valeur
 FROM per_codif
 WHERE famille IN ('A', 'F', 'P')
+  AND (ca_famille - msp_famille - fdg_famille - sst_famille) != 0

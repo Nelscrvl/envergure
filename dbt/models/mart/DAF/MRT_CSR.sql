@@ -11,14 +11,19 @@ WITH fact_mrt AS (
   SELECT codification_action, bu, mois, famille, code_rubrique, valeur FROM {{ ref('MRT_FDG') }}
   UNION ALL
   SELECT codification_action, bu, mois, famille, code_rubrique, valeur FROM {{ ref('MRT_SS_TRAITANT') }}
+),
+
+agg AS (
+  SELECT
+    codification_action,
+    bu,
+    mois,
+    ANY_VALUE(famille) AS famille,
+    'C118'             AS code_rubrique,
+    SUM(IF(code_rubrique IN ('C119','C123','C124'), valeur, 0)) AS valeur
+  FROM fact_mrt
+  GROUP BY codification_action, bu, mois
 )
 
-SELECT
-  codification_action,
-  bu,
-  mois,
-  ANY_VALUE(famille) AS famille,
-  'C118'             AS code_rubrique,
-  SUM(IF(code_rubrique IN ('C119','C123','C124'), valeur, 0)) AS valeur
-FROM fact_mrt
-GROUP BY codification_action, bu, mois
+SELECT * FROM agg
+WHERE valeur IS NOT NULL AND valeur != 0

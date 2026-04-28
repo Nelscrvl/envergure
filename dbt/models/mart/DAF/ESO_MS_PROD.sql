@@ -46,3 +46,4 @@ expanded AS (
 
 SELECT * FROM expanded
 WHERE NOT (code_rubrique = 'C119' AND famille = 'D')
+  AND valeur IS NOT NULL AND valeur != 0

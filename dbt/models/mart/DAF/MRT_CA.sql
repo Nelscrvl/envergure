@@ -9,14 +9,19 @@ WITH unioned AS (
   SELECT codification_action, bu, mois, famille, code_rubrique, valeur FROM {{ ref('ENV_CA') }}
   UNION ALL
   SELECT codification_action, bu, mois, famille, code_rubrique, valeur FROM {{ ref('ESO_CA') }}
+),
+
+agg AS (
+  SELECT
+    codification_action,
+    bu,
+    mois,
+    ANY_VALUE(famille) AS famille,
+    code_rubrique,
+    SUM(valeur)        AS valeur
+  FROM unioned
+  GROUP BY codification_action, bu, mois, code_rubrique
 )
 
-SELECT
-  codification_action,
-  bu,
-  mois,
-  ANY_VALUE(famille) AS famille,
-  code_rubrique,
-  SUM(valeur)        AS valeur
-FROM unioned
-GROUP BY codification_action, bu, mois, code_rubrique
+SELECT * FROM agg
+WHERE valeur IS NOT NULL AND valeur != 0

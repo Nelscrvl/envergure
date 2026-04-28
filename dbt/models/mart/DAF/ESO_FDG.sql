@@ -47,3 +47,4 @@ expanded AS (
 SELECT * FROM expanded
 -- C123 (total) exclut famille D (pas de sous-rubrique → assure total = somme breakdown)
 WHERE NOT (code_rubrique = 'C123' AND famille = 'D')
+  AND valeur IS NOT NULL AND valeur != 0
