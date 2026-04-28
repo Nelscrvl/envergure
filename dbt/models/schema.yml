@@ -21,6 +21,26 @@ sources:
         identifier: BDD_BU_NATIVE
       - name: BDD_EDM
         identifier: BDD_EDM_NATIVE
+      - name: book_2026
+        description: "Book commercial 2026 — snapshot natif de la GSheet (REFERENTIELS.book_2026 externe)"
+      - name: BEN17_R2026
+        description: "BEN17 — réalisé 2026 par codif_action × site × mois (CA, FdG, MS prod non chargée)"
+      - name: BEN17_REF_MARCHE
+        description: "BEN17 — référentiel marchés / lots / agences avec Code_BU et Activité"
+      - name: CUBA_MS_PROD
+        description: "CUBA — MS production par codif_action × mois (ms_2026_01 … ms_2026_12)"
+      - name: ENV_REF_ACTIONS
+        description: "Envergure — référentiel actions (codification_action → analytique_bu, famille_prestation, marché, …)"
+      - name: ENV_REF_MARCHES
+        description: "Envergure — référentiel marchés (codification_action → analytique_bu, marché, lot)"
+      - name: ENV_SS_TRAITANCE
+        description: "Envergure — sous-traitance par codification_action × mois (m_2026_01 … m_2026_12)"
+      - name: REF_AGENCES
+        description: "Référentiel agences (analytique_boussole → libellé site)"
+      - name: REF_RUBRIQUES
+        description: "Référentiel rubriques P&L (code → libellé)"
+      - name: REF_TERRITOIRES
+        description: "Référentiel territoires / SU — source de vérité code_bu → libellé + branche"
         
   - name: sofia
     schema: Extract_Sofia
@@ -43,3 +63,4 @@ sources:
       - name: 16898_GD_EST
       - name: 16900_IDF
       - name: prime_compile_clean
+

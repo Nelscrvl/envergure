@@ -206,3 +206,6 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 .venv/
+
+# Claude Code
+claude-code-setup.md
