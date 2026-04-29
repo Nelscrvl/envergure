@@ -1,0 +1,114 @@
+version: 2
+
+models:
+
+  # =====================================================================
+  # MRT consolidés (mart user-facing)
+  # =====================================================================
+  - name: MRT_CA
+    description: "CA consolidé (ENV + ESO) par codif × BU × mois × code_rubrique"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [codification_action, bu, mois, code_rubrique]
+    columns:
+      - name: codification_action
+        tests: [not_null]
+      - name: code_rubrique
+        tests: [not_null]
+
+  - name: MRT_FDG
+    description: "FdG consolidé (ENV + ESO) par codif × BU × mois × code_rubrique"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [codification_action, bu, mois, code_rubrique]
+    columns:
+      - name: code_rubrique
+        tests: [not_null]
+
+  - name: MRT_MS_PROD
+    description: "MS prod consolidé (ENV + ESO) par codif × BU × mois × code_rubrique"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [codification_action, bu, mois, code_rubrique]
+    columns:
+      - name: code_rubrique
+        tests: [not_null]
+
+  - name: MRT_SS_TRAITANT
+    description: "Sous-traitance consolidée (ENV + ESO) par codif × BU × mois × code_rubrique"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [codification_action, bu, mois, code_rubrique]
+    columns:
+      - name: code_rubrique
+        tests: [not_null]
+
+  - name: MRT_CA_MANDAT
+    description: "CA Mandataire (ENV book type=FDG) par codif × BU × mois × code_rubrique"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [codification_action, bu, mois, code_rubrique]
+    columns:
+      - name: code_rubrique
+        tests: [not_null]
+
+  - name: MRT_MB
+    description: "Marge Brute (CA - MS_PROD - FDG - SS_TRAITANT) par codif × BU × mois × famille"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [codification_action, bu, mois, code_rubrique]
+    columns:
+      - name: code_rubrique
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['C127','C129','C215','C607']
+
+  - name: MRT_CSR
+    description: "Coût des Services Rendus (MS_PROD + FDG + SS_TRAITANT) par codif × BU × mois"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [codification_action, bu, mois, code_rubrique]
+    columns:
+      - name: code_rubrique
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['C118']
+
+  - name: MRT_BDD_EDM
+    description: "EDM consolidée long format (toutes métriques × rubriques × dimensions enrichies)"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [CODIFICATION_ACTION, CODE_BU, MOIS, CODE_RUBRIQUE]
+    columns:
+      - name: BRANCHE
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ENVERGURE','ENVERGURE SO']
+      - name: CODIFICATION_ACTION
+        tests: [not_null]
+      - name: PRESTATION
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ACCOMPAGNEMENT','FORMATION','PRIVEE','DIVERS']
+      - name: CODE_BU
+        tests: [not_null]
+      - name: BU_LIBELLE
+        tests: [not_null]
+      - name: TYPE
+        tests:
+          - accepted_values:
+              values: ['REALISE']
+      - name: CODE_RUBRIQUE
+        tests:
+          - not_null
+          - relationships:
+              to: source('DAF_Sources', 'REF_RUBRIQUES')
+              field: code
+      - name: RUBRIQUE_LIBELLE
+        tests: [not_null]
+      - name: VALEUR
+        tests: [not_null]

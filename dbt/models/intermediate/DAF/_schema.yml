@@ -1,0 +1,112 @@
+version: 2
+
+models:
+
+  # =====================================================================
+  # Intermediates ESO (BEN17 / Sud-Ouest)
+  # =====================================================================
+  - name: ESO_CA
+    description: "CA BEN17 par codif × BU × mois × code_rubrique (long format)"
+    columns:
+      - name: codification_action
+        tests: [not_null]
+      - name: bu
+        tests: [not_null]
+      - name: mois
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1,2,3,4,5,6,7,8,9,10,11,12]
+              quote: false
+      - name: famille
+        tests:
+          - accepted_values:
+              values: ['A','F','P','D']
+      - name: code_rubrique
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['C110','C115','C116','C601','C602']
+
+  - name: ESO_FDG
+    description: "Frais de gestion BEN17 par codif × BU × mois × code_rubrique"
+    columns:
+      - name: codification_action
+        tests: [not_null]
+      - name: code_rubrique
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['C123','C603','C604','C605']
+
+  - name: ESO_MS_PROD
+    description: "MS prod BEN17 par codif × BU × mois × code_rubrique"
+    columns:
+      - name: codification_action
+        tests: [not_null]
+      - name: code_rubrique
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['C119','C120','C121','C611']
+
+  - name: ESO_SS_TRAITANT
+    description: "Sous-traitance BEN17 par codif × BU × mois × code_rubrique"
+    columns:
+      - name: codification_action
+        tests: [not_null]
+      - name: code_rubrique
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['C124','C125','C126','C606']
+
+  # =====================================================================
+  # Intermediates ENV (book_2026 / CUBA / GSheet)
+  # =====================================================================
+  - name: ENV_CA
+    description: "CA Envergure par codif × BU × mois × code_rubrique"
+    columns:
+      - name: codification_action
+        tests: [not_null]
+      - name: code_rubrique
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['C110','C115','C116','C601','C602']
+
+  - name: ENV_FDG
+    description: "Frais de gestion Envergure par codif × BU × mois × code_rubrique"
+    columns:
+      - name: code_rubrique
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['C123','C603','C604','C605']
+
+  - name: ENV_CA_MANDAT
+    description: "CA Mandat Envergure (book filtré type=FDG) par codif × BU × mois × code_rubrique"
+    columns:
+      - name: code_rubrique
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['C625','C628','C629','C630']
+
+  - name: ENV_MS_PROD
+    description: "MS prod Envergure (CUBA) par codif × BU × mois × code_rubrique"
+    columns:
+      - name: code_rubrique
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['C119','C120','C121','C611']
+
+  - name: ENV_SS_TRAITANT
+    description: "Sous-traitance Envergure par codif × BU × mois × code_rubrique"
+    columns:
+      - name: code_rubrique
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['C124','C125','C126','C606']
