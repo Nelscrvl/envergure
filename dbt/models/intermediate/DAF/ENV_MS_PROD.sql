@@ -2,9 +2,9 @@
 
 {# MS prod Envergure (CUBA_MS_PROD) — long format avec code_rubrique.
    Source : `ms_2026_NN` de CUBA_MS_PROD (MS prod NON chargée).
-   La valeur émise est la **MS Prod chargée** = ms_2026_NN × 1.45 (taux de
-   chargement RH pour reflet du coût complet). Tous les MRT/MB/CSR en aval
-   consomment cette valeur chargée.
+   La valeur émise est la **MS Prod BRUTE** (sans chargement RH).
+   Le chargement (× H02B_TAUX_CHARGES_SOCIALES) est appliqué côté Sheet
+   `06_Calculs` du reporting v6, à partir de `1_natives.HYPOTHESES_2026`.
    Mapping rubriques : C119 (total A+F+P) + C120 (A) / C121 (F) / C611 (P).
    Pas de code MS Prod pour D → C119 exclut famille D pour assurer
    C119 = C120 + C121 + C611. #}
@@ -60,7 +60,7 @@ joined AS (
 ),
 
 agg AS (
-  SELECT codification_action, bu, mois, famille, SUM(valeur) * 1.45 AS valeur  -- chargement RH
+  SELECT codification_action, bu, mois, famille, SUM(valeur) AS valeur  -- MS Prod brute, chargement appliqué côté Sheet
   FROM joined
   GROUP BY codification_action, bu, mois, famille
 ),

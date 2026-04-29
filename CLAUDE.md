@@ -83,14 +83,20 @@ Conséquence : un total exclut les familles qui n'ont pas de code spécifique da
 WHERE NOT (code_rubrique = 'CXXX' AND famille IN ('D', ...))
 ```
 
-### MS Prod chargée — taux de chargement 1.45
+### MS Prod brute — chargement appliqué côté Sheet (archi v6)
 Les sources fournissent la **MS Prod NON chargée** :
 - `BEN17_R2026.ms_prod_non_chargee` (ESO)
 - `CUBA_MS_PROD.ms_2026_NN` (ENV)
 
 Les intermediates **`ESO_MS_PROD` et `ENV_MS_PROD`** appliquent un taux de chargement RH de **× 1.45** dans la CTE `agg` (`SUM(...) * 1.45 AS valeur`) pour refléter le coût complet (cotisations, charges sociales). Tous les modèles aval (`MRT_MS_PROD`, `MRT_MB`, `MRT_CSR`, `MRT_FACTS_EXTERNES`) consomment cette valeur **chargée**.
 
-Si le taux change (négociation RH, etc.), le modifier au même endroit dans les 2 intermediates. À termiser éventuellement en `var('ms_prod_loading_factor', 1.45)` dans `dbt_project.yml` si le taux devient discuté/variant.
+Le taux de chargement RH vit côté reporting v6 dans la table `1_natives.HYPOTHESES_2026` (code `H02B_TAUX_CHARGES_SOCIALES`, périmètre `GLOBAL`, valeur courante = 145%). Il est appliqué côté Sheet via `06_Calculs` :
+```excel
+K_MS_CHARGEE = SUMIFS(facts_brutes, rubrique="C119", BU=...) ×
+               INDEX(hyp_<mois>, MATCH("H02B_TAUX_CHARGES_SOCIALES", hyp_codes, 0))
+```
+
+→ Si la DAF change le taux, il suffit de mettre à jour la ligne dans le fichier Hypothèses (puis snapshot vers `1_natives.HYPOTHESES_2026`). Aucune modif dbt/BQ requise. Si la granularité doit passer de GLOBAL à par BU, ajouter les lignes correspondantes dans `1_natives.HYPOTHESES_2026` et adapter le `MATCH` côté Sheet.
 
 ### Pas de lignes nulles ou zéro
 Chaque intermediate et chaque MRT filtrent en sortie `WHERE valeur IS NOT NULL AND valeur != 0` (ou `HAVING` équivalent dans une CTE wrap). Conséquence : les modèles ne contiennent QUE des lignes porteuses d'information. Pour les MRT consolidés, le pattern est :
