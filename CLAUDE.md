@@ -19,7 +19,7 @@ BEN17_R2026, BEN17_REF_MARCHE).
 | `0_sources` | Imports bruts GSheet | `BDD_BU_GSHEET*`, `BDD_EDM_GSHEET*`, `Looker_access_control` |
 | `1_natives` | Tables natives BQ (snapshots des GSheet, refs) | `book_2026`, `BEN17_R2026`, `BEN17_REF_MARCHE`, `CUBA_MS_PROD`, `ENV_SS_TRAITANCE`, `ENV_REF_ACTIONS`, `ENV_REF_MARCHES`, `REF_RUBRIQUES`, `REF_TERRITOIRES`, `REF_AGENCES`, `BDD_BU_NATIVE`, `BDD_EDM_NATIVE` |
 | `2_intermediate` | Briques par source (ESO_/ENV_) | `ESO_CA`, `ESO_FDG`, `ESO_MS_PROD`, `ESO_SS_TRAITANT`, `ENV_CA`, `ENV_FDG`, `ENV_CA_MANDAT`, `ENV_MS_PROD`, `ENV_SS_TRAITANT` |
-| `2_mart` | Mart user-facing | `MRT_CA`, `MRT_FDG`, `MRT_MS_PROD`, `MRT_SS_TRAITANT`, `MRT_CA_MANDAT`, `MRT_MB`, `MRT_CSR`, `MRT_BDD_EDM` + vues sécurisées existantes |
+| `2_mart` | Mart user-facing | `MRT_CA`, `MRT_FDG`, `MRT_MS_PROD`, `MRT_SS_TRAITANT`, `MRT_CA_MANDAT`, `MRT_MB`, `MRT_CSR`, `MRT_FACTS_EXTERNES` + vues sécurisées existantes |
 
 Le projet utilise un override `generate_schema_name` (`macros/generate_schema_name.sql`) qui prend `+schema` tel quel — donc `+schema: 2_mart` → dataset `2_mart` (pas de préfixe environnement).
 
@@ -35,7 +35,7 @@ dbt/models/
 └── mart/DAF/
     ├── _schema.yml          ← tests des 8 MRT_*
     ├── MRT_CA.sql, MRT_FDG.sql, MRT_MS_PROD.sql, MRT_SS_TRAITANT.sql
-    ├── MRT_CA_MANDAT.sql, MRT_MB.sql, MRT_CSR.sql, MRT_BDD_EDM.sql
+    ├── MRT_CA_MANDAT.sql, MRT_MB.sql, MRT_CSR.sql, MRT_FACTS_EXTERNES.sql
     └── mrt_BDD_*.sql, BDD_BU_SECURE.sql  (legacy)
 ```
 
@@ -59,8 +59,8 @@ Format **long**, 1 ligne par `(codification_action × bu × mois × code_rubriqu
 
 | codification_action | bu | mois (INT 1-12) | famille | code_rubrique | valeur |
 
-`famille` est propagée pour permettre la jointure dans MRT_BDD_EDM (PRESTATION).
-`MRT_BDD_EDM` ajoute les colonnes finales : `BRANCHE`, `MARCHE`, `PRESTATION`, `ANALYTIQUE_BOUSSOLE`, `SITE`, `CODE_BU`, `BU_LIBELLE`, `TYPE`, `ANNEE`, `MOIS` (STRING), `CODE_RUBRIQUE`, `RUBRIQUE_LIBELLE`, `VALEUR`.
+`famille` est propagée pour permettre la jointure dans MRT_FACTS_EXTERNES (PRESTATION).
+`MRT_FACTS_EXTERNES` ajoute les colonnes finales : `BRANCHE`, `MARCHE`, `PRESTATION`, `ANALYTIQUE_BOUSSOLE`, `SITE`, `CODE_BU`, `BU_LIBELLE`, `TYPE`, `ANNEE`, `MOIS` (STRING), `CODE_RUBRIQUE`, `RUBRIQUE_LIBELLE`, `VALEUR`.
 
 ## Règles métier critiques
 
@@ -70,7 +70,7 @@ Format **long**, 1 ligne par `(codification_action × bu × mois × code_rubriqu
 - Le mapping famille → libellé PRESTATION est dans `seeds/seed_famille_prestation.csv` :
   - `A → ACCOMPAGNEMENT`, `F → FORMATION`, `P → PRIVEE`, `D → DIVERS`
 
-### Branche (MRT_BDD_EDM)
+### Branche (MRT_FACTS_EXTERNES)
 - Lookup direct dans `REF_TERRITOIRES.code_bu_su` (= code_bu) → `branche` :
   - `BEN17`, `BEN18` → `'ENVERGURE SO'` (avec espace, pas underscore)
   - Autres BU → `'ENVERGURE'`
@@ -88,7 +88,7 @@ Les sources fournissent la **MS Prod NON chargée** :
 - `BEN17_R2026.ms_prod_non_chargee` (ESO)
 - `CUBA_MS_PROD.ms_2026_NN` (ENV)
 
-Les intermediates **`ESO_MS_PROD` et `ENV_MS_PROD`** émettent désormais la **MS Prod BRUTE** (pas de × 1.45 hardcodé). Tous les modèles aval (`MRT_MS_PROD`, `MRT_MB`, `MRT_CSR`, `MRT_BDD_EDM`) consomment cette valeur **brute**.
+Les intermediates **`ESO_MS_PROD` et `ENV_MS_PROD`** appliquent un taux de chargement RH de **× 1.45** dans la CTE `agg` (`SUM(...) * 1.45 AS valeur`) pour refléter le coût complet (cotisations, charges sociales). Tous les modèles aval (`MRT_MS_PROD`, `MRT_MB`, `MRT_CSR`, `MRT_FACTS_EXTERNES`) consomment cette valeur **chargée**.
 
 Le taux de chargement RH vit côté reporting v6 dans la table `1_natives.HYPOTHESES_2026` (code `H02B_TAUX_CHARGES_SOCIALES`, périmètre `GLOBAL`, valeur courante = 145%). Il est appliqué côté Sheet via `06_Calculs` :
 ```excel
@@ -134,22 +134,22 @@ Codes hardcodés dans chaque intermediate via le macro `expand_rubriques`. Libel
 
 ## Tests dbt (`models/mart/DAF/_schema.yml`)
 
-57 tests automatisés sur la chaîne `+MRT_BDD_EDM` :
+57 tests automatisés sur la chaîne `+MRT_FACTS_EXTERNES` :
 - `unique_combination_of_columns(codif_action, bu, mois, code_rubrique)` sur tous les MRT
 - `not_null` + `accepted_values` sur famille / code_rubrique / BRANCHE / PRESTATION / TYPE
-- `relationships` MRT_BDD_EDM.CODE_RUBRIQUE → REF_RUBRIQUES.code
+- `relationships` MRT_FACTS_EXTERNES.CODE_RUBRIQUE → REF_RUBRIQUES.code
 
 ## Commandes courantes
 
 ```bash
 # Build complet de la chaîne consolidée
-dbt run --select +MRT_BDD_EDM
+dbt run --select +MRT_FACTS_EXTERNES
 
 # Tests
-dbt test --select +MRT_BDD_EDM
+dbt test --select +MRT_FACTS_EXTERNES
 
 # Build + test en chaîne
-dbt build --select +MRT_BDD_EDM
+dbt build --select +MRT_FACTS_EXTERNES
 
 # Recharger les seeds (après édition CSV)
 dbt seed
@@ -160,7 +160,7 @@ dbt seed
 **Ajouter une nouvelle métrique** (ex: nouveau type de coût) :
 1. Créer `models/intermediate/DAF/ENV_NEW.sql` (et `ESO_NEW.sql` si concerné) avec `{{ config(schema='2_intermediate') }}` + macros `clean_numeric` + `expand_rubriques`
 2. Créer `models/mart/DAF/MRT_NEW.sql` avec `{{ config(schema='2_mart') }}`, pattern UNION ENV + ESO → CTE `agg` → `WHERE valeur IS NOT NULL AND valeur != 0`
-3. Ajouter UNION ALL dans `MRT_BDD_EDM.fact`
+3. Ajouter UNION ALL dans `MRT_FACTS_EXTERNES.fact`
 4. Documenter dans `models/intermediate/DAF/_schema.yml` (intermediate) et `models/mart/DAF/_schema.yml` (MRT) avec `accepted_values` sur `code_rubrique` + `unique_combination_of_columns` sur les MRT
 
 **Ajouter une nouvelle rubrique à une métrique existante** (cas typique : nouveau code rubrique dans REF_RUBRIQUES) :

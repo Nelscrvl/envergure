@@ -1,7 +1,10 @@
 {{ config(schema='2_mart') }}
 
-{# Consolidation au format BDD EDM (long, type / annee / mois / rubrique / valeur).
-   Faits   : MRT_CA, MRT_FDG, MRT_MS_PROD, MRT_SS_TRAITANT, MRT_CA_MANDAT.
+{# Consolidation des FAITS EXTERNES au format long (type / annee / mois / rubrique / valeur).
+   Source unique pour `04_Facts_BQ` du reporting v6 (Connected Sheets).
+   Ne contient PAS les hypothèses ni les calculs business (× 1.45, matériel, impôts,
+   anim, amorti) — ceux-ci vivent côté Sheet (`06_Calculs`).
+   Faits  : MRT_CA, MRT_FDG, MRT_MS_PROD, MRT_SS_TRAITANT, MRT_CA_MANDAT, MRT_MB, MRT_CSR.
    Chaque MRT porte déjà son `code_rubrique` (total + famille-spécifique en
    lignes distinctes). Cette table se contente de :
      - faire le UNION ALL des faits
