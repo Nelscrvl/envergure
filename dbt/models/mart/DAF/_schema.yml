@@ -76,8 +76,8 @@ models:
           - accepted_values:
               values: ['C118']
 
-  - name: MRT_BDD_EDM
-    description: "EDM consolidée long format (toutes métriques × rubriques × dimensions enrichies)"
+  - name: MRT_FACTS_EXTERNES
+    description: "Faits externes consolidés au format long (toutes métriques × rubriques × dimensions enrichies). Source du reporting v6 `04_Facts_BQ` ; ne contient PAS les hypothèses ni les calculs business — ceux-ci vivent côté Sheet (`06_Calculs`)."
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns: [CODIFICATION_ACTION, CODE_BU, MOIS, CODE_RUBRIQUE]
