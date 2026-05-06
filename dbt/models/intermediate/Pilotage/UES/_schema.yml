@@ -1,0 +1,35 @@
+version: 2
+
+models:
+
+  - name: int_pilotage
+    description: >
+      Bénéficiaires UES classifiés (adhésion, orientation, retour emploi, portefeuille, sortie anticipée)
+      enrichis des primes détectées.
+    columns:
+      - name: id_benef
+        tests: [not_null]
+
+  - name: int_prime
+    description: "Primes bénéficiaires (résultats déclarés, montants facturés) issues du rapprochement SI-Emploi × CSV primes régionaux."
+
+  - name: int_prime_clean
+    description: "Primes nettoyées et dédupliquées avant agrégation."
+
+  - name: int_pilotage_prime
+    description: "Jointure pilotage UES × primes (date détection prime, montant)."
+
+  - name: int_benef_ca_prime
+    description: "Bénéficiaires enrichis du CA facturé et des primes associées."
+
+  - name: int_formateur_Ca
+    description: "CA par formateur — facturation enrichie des informations bénéficiaire, filtré sur montant_HT > 0."
+
+  - name: int_formateur_portefeuille
+    description: "Portefeuille actif par formateur (bénéficiaires en cours de prestation)."
+
+  - name: int_referent_rdv_ca
+    description: "RDV et CA agrégés par référent."
+
+  - name: int_union_all_prime
+    description: "Union brute des fichiers CSV primes régionaux (avant nettoyage int_prime_clean)."

@@ -1,0 +1,17 @@
+version: 2
+
+models:
+
+  - name: int_pilotage_ap3
+    description: "Bénéficiaires AP3 classifiés (adhésion, orientation, retour emploi, portefeuille)."
+    columns:
+      - name: id_benef
+        tests: [not_null]
+      - name: marche
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['AP3']
+
+  - name: int_pmsmp
+    description: "Périodes de Mise en Situation en Milieu Professionnel (PMSMP)."

@@ -1,0 +1,9 @@
+version: 2
+
+models:
+
+  - name: int_rdv_detail
+    description: "Détail des RDV par bénéficiaire et référent (toutes marches confondues)."
+
+  - name: int_rdv_formateur
+    description: "RDV par formateur."

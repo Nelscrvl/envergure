@@ -1,0 +1,22 @@
+version: 2
+
+models:
+
+  - name: int_atr_atelier
+    description: "Ateliers ATR par bénéficiaire."
+
+  - name: int_atr_factu
+    description: "Facturation ATR dédupliquée par prestation collective."
+
+  - name: int_atr_pilotage
+    description: >
+      Bénéficiaires ATR enrichis des RDV et de la facturation.
+      Calcule l'adhésion, l'orientation, le CA atelier et le rang d'entrée par commande.
+    columns:
+      - name: id_benef
+        tests: [not_null]
+      - name: marche
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ATR']
