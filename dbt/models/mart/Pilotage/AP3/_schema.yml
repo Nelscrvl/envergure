@@ -1,0 +1,12 @@
+version: 2
+
+models:
+
+  - name: mrt_pilotage_ap3
+    description: "Table mart pilotage AP3 (expose int_pilotage_ap3)."
+    columns:
+      - name: id_benef
+        tests: [not_null]
+
+  - name: mrt_pmsmp
+    description: "Table mart PMSMP (expose int_pmsmp)."

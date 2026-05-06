@@ -1,0 +1,6 @@
+version: 2
+
+models:
+
+  - name: mrt_adv_facture
+    description: "Table mart ADV — bénéficiaires enrichis de la facturation (expose int_adv)."

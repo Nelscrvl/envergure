@@ -1,0 +1,32 @@
+version: 2
+
+models:
+
+  - name: int_activite
+    description: "Activité bénéficiaire agrégée par id_benef × marché × site. Filtrée sur marchés ATC, ATR, ESPR."
+    columns:
+      - name: id_benef
+        tests: [not_null]
+      - name: marche
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ATC', 'ATR', 'ESPR']
+
+  - name: int_adhesion
+    description: "Statuts d'adhésion individuels par bénéficiaire (1 ligne par bénéficiaire, tous statuts)."
+    columns:
+      - name: id_benef
+        tests: [not_null]
+
+  - name: int_inscrite
+    description: "Inscrites Sofia (Soc 2 + Soc 3) avec formateur renseigné (fr_formateur_id non nul)."
+    columns:
+      - name: fr_formateur_id
+        tests: [not_null]
+
+  - name: int_presence
+    description: "Présences Sofia consolidées (Soc 2 + Soc 3 + Soc 4), enrichies des durées en minutes et en heures."
+
+  - name: int_rdv_lot_site
+    description: "RDV agrégés par date × référent × site × marché × statut présence, avec temps de travail référent."

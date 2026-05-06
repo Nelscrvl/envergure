@@ -1,0 +1,33 @@
+version: 2
+
+models:
+
+  - name: mrt_pilotage
+    description: "Table mart pilotage UES — bénéficiaires classifiés enrichis des primes (expose int_pilotage)."
+    columns:
+      - name: id_benef
+        tests: [not_null]
+
+  - name: mrt_presence
+    description: "Table mart présences Sofia (expose int_presence)."
+
+  - name: mrt_prime
+    description: "Table mart primes UES (expose int_prime_clean)."
+
+  - name: mrt_rdv_detail
+    description: "Table mart détail des RDV (expose int_rdv_detail)."
+
+  - name: mrt_facture
+    description: "Table mart facturation UES (expose int_facture)."
+    columns:
+      - name: id_benef
+        tests: [not_null]
+
+  - name: mrt_formateur_portefeuille
+    description: "Table mart portefeuille formateur (expose int_formateur_portefeuille)."
+
+  - name: mrt_referent_Ca
+    description: "Table mart CA par référent (expose int_referent_rdv_ca)."
+
+  - name: mrt_referent_rdv_ca
+    description: "Table mart RDV et CA agrégés par référent (expose int_referent_rdv_ca)."

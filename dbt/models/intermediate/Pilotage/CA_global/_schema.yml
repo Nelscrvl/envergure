@@ -1,0 +1,6 @@
+version: 2
+
+models:
+
+  - name: int_Ca_Global
+    description: "CA global formateurs enrichi des primes (jointure int_formateur_Ca × int_pilotage_prime)."

@@ -1,0 +1,14 @@
+version: 2
+
+models:
+
+  - name: int_adv
+    description: >
+      Bénéficiaires enrichis des données de facturation (FULL JOIN stg_benef × stg_facture).
+      id_benef peut être NULL si une facture n'a pas de correspondance bénéficiaire.
+
+  - name: int_facture
+    description: "Factures enrichies des informations bénéficiaire (agence, conseiller, référent, dates prestation)."
+    columns:
+      - name: id_benef
+        tests: [not_null]
