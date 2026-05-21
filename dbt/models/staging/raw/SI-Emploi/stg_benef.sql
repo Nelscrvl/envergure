@@ -7,6 +7,7 @@ with source as (
 renamed as (
 
     select
+        instance,
         id_benef,
         civilite,
         nom,

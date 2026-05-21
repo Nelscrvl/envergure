@@ -1,3 +1,3 @@
 SELECT
 *
-FROM {{ref("int_referrent_rdv_ca")}}
+FROM {{ref("int_referent_rdv_ca")}}

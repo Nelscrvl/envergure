@@ -64,3 +64,8 @@ sources:
       - name: 16900_IDF
       - name: prime_compile_clean
 
+
+
+  - name: Importation_gsheet
+    tables: 
+    - name: stg_satisfaction_de 
