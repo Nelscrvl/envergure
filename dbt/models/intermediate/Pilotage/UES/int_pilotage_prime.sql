@@ -106,7 +106,7 @@ prime_unique AS (
         PARTITION BY id_benef 
         ORDER BY Date_primes ASC
       ) as rn
-    FROM {{ref("int_referrent_rdv_ca")}} b
+    FROM {{ref("int_referent_rdv_ca")}} b
     WHERE Montant_prime > 1
   )
   WHERE rn = 1

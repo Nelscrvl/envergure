@@ -38,7 +38,8 @@ renamed as (
         signature_envoi,
         signature_benef,
         precision_rdv,
-        _extracted_at
+        _extracted_at,
+    
 
     from source
 
