@@ -37,7 +37,7 @@ GCP_PROJECT_ID = 'dynamic-camp-465312-b6'
 sofia_config = {
         'api': {
             'base_url': 'https://envergure.sc-form.net',  
-            'username': 'nelson@avdata',              
+            'username': 'nelson@avdata.fr',              
             'password': "EGMKQ6WmpxZnMRQ@"              
         },
         'bq': {
@@ -125,16 +125,16 @@ sofia_endpoints.append({
             "table": "Inscrite_Soc_2"
         })
    
-    #for period in monthly_periods:
-        #sofia_endpoints.append({
-            #"endpoint": "/SofiaEDC/API/PresenceSta/GetSeance",
-           # "params": {
-            #    "IDSociete": 2, 
-            #    "Debut": period['Debut'], 
-            #    "Fin": period['Fin']
-          #  },
-          #  "table": "Presence_Soc_2"  # ← Même table pour tous !
-          #  })
+for period in monthly_periods:
+        sofia_endpoints.append({
+            "endpoint": "/SofiaEDC/API/PresenceSta/GetSeance",
+            "params": {
+                "IDSociete": 2, 
+                "Debut": period['Debut'], 
+                "Fin": period['Fin']
+            },
+            "table": "Presence_Soc_2"  # ← Même table pour tous !
+            })
         
     # Configuration MySQL
 mysql_config = {
