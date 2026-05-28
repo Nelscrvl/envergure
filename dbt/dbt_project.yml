@@ -24,6 +24,9 @@ models:
     intermediate:
       DAF:
         +materialized: table
+      Pilotage:
+        General:
+          +materialized: table
     mart:
       +schema: sie_emploi
       +materialized: table
@@ -36,4 +39,8 @@ models:
           +schema: dbt_transfo_ca_pilotage
         AP3:
           +schema: dbt_transfo_AP3
+        General:
+          +schema: Pilotage
+      DAF:
+        +schema: DAF
           

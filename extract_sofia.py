@@ -268,16 +268,16 @@ if __name__ == "__main__":
     }
     
     sofia_endpoints = []
-    #sofia_endpoints.append(  {
-           # "endpoint": "/SofiaEDC/API/Entite/GetEntite",
-            #"params": {"IDSociete": 2, "ACTION": "ACTION"},
-            #"table": "entites"
-       # })
-    #sofia_endpoints.append({
-           # "endpoint": "/SofiaEDC/API/Entite/GetEntite",
-           # "params": {"IDSociete": 3, "ACTION": "INSCRIT"},
-           # "table": "Inscrite_Soc_3"
-      #  })
+    sofia_endpoints.append(  {
+            "endpoint": "/SofiaEDC/API/Entite/GetEntite",
+            "params": {"IDSociete": 2, "ACTION": "ACTION"},
+            "table": "entites"
+        })
+    sofia_endpoints.append({
+            "endpoint": "/SofiaEDC/API/Entite/GetEntite",
+            "params": {"IDSociete": 3, "ACTION": "INSCRIT"},
+            "table": "Inscrite_Soc_3"
+        })
     for period in monthly_periods:
         sofia_endpoints.append({
             "endpoint": "/SofiaEDC/API/PresenceSta/GetSeance",

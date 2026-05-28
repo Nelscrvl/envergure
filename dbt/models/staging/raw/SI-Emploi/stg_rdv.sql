@@ -7,6 +7,7 @@ with source as (
 renamed as (
 
     select
+        instance,
         id_benef,
         id_rdv,
         format_datetime('%Y-%m-%d %H:%M:%S', date_deb) as date_deb,
@@ -21,6 +22,7 @@ renamed as (
         referent,
         id_referent,
         site,
+        lot,
         id_site,
         present,
         motif_absence,

@@ -13,6 +13,7 @@ id_ref_principal,
 date_demarrage,
 date_fin_theo,
 date_fin_prest,
+id_presta_coll,
 lot,
 CASE
   WHEN split(lot, ' ')[safe_offset(0)] = ''
@@ -169,7 +170,7 @@ LEFT JOIN {{(ref("stg_prime_compile"))}} p
 ajout_note AS (
 SELECT
 ap.*,
-CASE WHEN ap.marche IN("ATR","VS2","ESPR") AND rnk_lc =1 THEN 1 
+CASE WHEN ap.marche IN("ATR","ESPR") AND rnk_lc =1 THEN 1 
 ELSE 0
 END AS dont_nb_sessions,
 CASE WHEN REGEXP_CONTAINS(CAST(sd.note_globale AS STRING), r'^\d+$') THEN CAST(sd.note_globale AS INT64) ELSE NULL END AS note_globale
@@ -181,10 +182,10 @@ ON ap.email = sd.mail
 final AS (
 SELECT
 an.*,
-CASE WHEN note_globale >=0 AND note_globale <= 5 THEN 1 
-ELSE 0 
+CASE WHEN note_globale >=0 AND note_globale <= 5 THEN 1
+ELSE 0
 END AS nb_de_note,
-CASE WHEN rnk_lc =1 AND statut = "Annulé" THEN 1 
+CASE WHEN rnk_lc =1 AND statut = "Annulé" THEN 1
 ELSE 0
 END AS dont_sessions_annulee,
 p.total_nb_heure,
@@ -193,7 +194,7 @@ FROM ajout_note as an
 LEFT JOIN {{(ref("int_pmsmp"))}} as p
 ON an.id_benef = p.id_benef
 )
+
 SELECT
 *
 FROM final
-
