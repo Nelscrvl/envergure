@@ -210,3 +210,7 @@ __marimo__/
 # Claude Code
 claude-code-setup.md
 .DS_Store
+
+# Extraction Sofia
+backups/
+extraction_*.log

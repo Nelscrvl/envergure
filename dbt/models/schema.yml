@@ -50,6 +50,9 @@ sources:
       - name: Presence_Soc_4
       - name: Inscrite_Soc_2
       - name: Inscrite_Soc_3
+      - name: Inscrite_Soc_4
+      - name: Convention_Soc_2
+      - name: Convention_Soc_4
       - name: Stage_Soc_2
       - name: Stage_Soc_3
       - name: entites

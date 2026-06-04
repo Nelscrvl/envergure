@@ -61,6 +61,116 @@ def generate_monthly_periods(start_date: str, end_date: str) -> List[Dict]:
     return periods
 
 
+def format_date_for_societe(date_str: str, id_societe: int) -> str:
+    """
+    IDSociete 1 et 2 : format normal AAAA-MM-JJ
+    IDSociete 3 : format inversé AAAA-JJ-MM
+    """
+    if id_societe == 3:
+        dt = datetime.strptime(date_str, '%Y-%m-%d')
+        return f"{dt.year}-{dt.day:02d}-{dt.month:02d}"
+    return date_str
+
+
+def build_sofia_endpoints(start_date: str, end_date: str) -> List[Dict]:
+    """Construit la liste complète des endpoints Sofia à extraire."""
+    monthly_periods = generate_monthly_periods(start_date, end_date)
+    endpoints = []
+
+    for period in monthly_periods:
+        endpoints.append({
+            "endpoint": "/SofiaEDC/API/PresenceSta/GetSeance",
+            "params": {
+                "IDSociete": 3,
+                "debut": format_date_for_societe(period['Debut'], 3),
+                "fin": format_date_for_societe(period['Fin'], 3)
+            },
+            "table": "Presence_Soc_3"
+        })
+
+    for period in monthly_periods:
+        endpoints.append({
+            "endpoint": "/SofiaEDC/API/PresenceSta/GetSeance",
+            "params": {"IDSociete": 2, "Debut": period['Debut'], "Fin": period['Fin']},
+            "table": "Presence_Soc_2"
+        })
+
+    for period in monthly_periods:
+        endpoints.append({
+            "endpoint": "/SofiaEDC/API/PresenceSta/GetSeance",
+            "params": {"IDSociete": 4, "Debut": period['Debut'], "Fin": period['Fin']},
+            "table": "Presence_Soc_4"
+        })
+
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/Facture/Get",
+        "params": {
+        "Entite": "Factures",
+        "ValideOnly": "False",
+        "IDSoc": 4,
+        "DateDebut": "2020-01-01",
+        "DateFin": "2026-12-31"},
+        "table": "Facture_soc_4"
+    })
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/Facture/Get",
+        "params": {
+        "Entite": "Factures",
+        "ValideOnly": "False",
+        "IDSoc": 2,
+        "DateDebut": "2020-01-01",
+        "DateFin": "2026-12-31"},
+        "table": "Facture_soc_2"
+    })
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/Entite/GetEntite",
+        "params": {"IDSociete": 2, "ACTION": "ACTION"},
+        "table": "entites"
+    })
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/Entite/GetEntite",
+        "params": {"IDSociete": 3, "ACTION": "INSCRIT"},
+        "table": "Inscrite_Soc_3"
+    })
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/Entite/GetEntite",
+        "params": {"IDSociete": 4, "ACTION": "INSCRIT"},
+        "table": "Inscrite_Soc_4"
+    })
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/Entite/GetEntite",
+        "params": {"IDSociete": 2, "ACTION": "INSCRIT"},
+        "table": "Inscrite_Soc_2"
+    })
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/Financement/Get?",
+        "params": {"Entite": "Convention","IDSoc": 2},
+        "table": "Convention_Soc_2"
+    })
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/Financement/Get?",
+        "params": {"Entite": "Convention", "IDSoc": 4},
+        "table": "Convention_Soc_4"
+    })
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/StageEntreprise/GetStageEntrep",
+        "params": {"IDSociete": 2, "Debut": "2026-01-01", "Fin": "2026-12-31"},
+        "table": "Stage_Soc_2"
+    })
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/StageEntreprise/GetStageEntrep",
+        "params": {"IDSociete": 3, "Debut": "2026-01-01", "Fin": "2026-12-31"},
+        "table": "Stage_Soc_3"
+    })
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/StageEntreprise/GetStageEntrep",
+        "params": {"IDSociete": 4, "Debut": "2026-01-01", "Fin": "2026-12-31"},
+        "table": "Stage_Soc_4"
+    })
+
+    return endpoints
+
+
 class APIExtractor:
     """Classe pour gérer l'extraction des données depuis l'API"""
     
@@ -88,7 +198,7 @@ class APIExtractor:
         
         for attempt in range(max_retries):
             try:
-                response = self.session.get(url, params=params, timeout=30)
+                response = self.session.get(url, params=params, timeout=180)
                 response.raise_for_status()
                 data = response.json()
                 logger.info(f"✓ {endpoint} : {len(data) if isinstance(data, list) else 1} enregistrements récupérés")
@@ -103,6 +213,97 @@ class APIExtractor:
                     return []
         return []
     
+    def extract_tarif_conventions(self, bq: 'BigQueryLoader') -> Dict:
+        """
+        Extraction incrémentale des TarifConvention.
+        N'appelle l'API que pour les (IDSoc, IDConvent) pas encore chargés dans BQ.
+        """
+        logger.info("\n========== 📋 TARIF CONVENTIONS (incrémental) ==========")
+        stats = {"success": 0, "failed": 0, "skipped": 0, "total_records": 0}
+
+        # 1. Récupère tous les (IDSoc, IDConvent) connus dans les tables Convention
+        all_conventions = bq.query(f"""
+            SELECT DISTINCT IDConvent, 2 AS IDSoc
+            FROM `{bq.project_id}.{self.bq_dataset}.Convention_Soc_2`
+            WHERE IDConvent IS NOT NULL
+            UNION ALL
+            SELECT DISTINCT IDConvent, 4 AS IDSoc
+            FROM `{bq.project_id}.{self.bq_dataset}.Convention_Soc_4`
+            WHERE IDConvent IS NOT NULL
+        """)
+
+        if not all_conventions:
+            logger.warning("⚠️  Aucune convention trouvée dans Convention_Soc_2 / Convention_Soc_4")
+            return stats
+
+        # 2. Récupère les (IDSoc, IDConvent) déjà chargés dans TarifConvention
+        already_loaded = bq.query(f"""
+            SELECT DISTINCT IDConvent, IDSoc
+            FROM `{bq.project_id}.{self.bq_dataset}.TarifConvention`
+        """)
+        already_loaded_set = {(r["IDConvent"], r["IDSoc"]) for r in already_loaded}
+
+        # 3. Calcule le delta
+        to_fetch = [
+            r for r in all_conventions
+            if (r["IDConvent"], r["IDSoc"]) not in already_loaded_set
+        ]
+
+        logger.info(f"📊 {len(all_conventions)} conventions connues, "
+                    f"{len(already_loaded_set)} déjà chargées, "
+                    f"{len(to_fetch)} à fetcher")
+
+        # 4. Appel API pour chaque nouvelle convention — batch BQ tous les 50
+        BATCH_SIZE = 50
+        batch = []
+        table_initialized = len(already_loaded_set) > 0  # True si la table existe déjà
+
+        for i, row in enumerate(to_fetch, 1):
+            id_convent = row["IDConvent"]
+            id_soc = row["IDSoc"]
+
+            data = self.fetch_data(
+                "/SofiaEDC/API/Financement/Get",
+                params={"Entite": "TarifConvention", "IDSoc": id_soc, "IDConvent": id_convent}
+            )
+
+            time.sleep(0.3)
+
+            if data:
+                for record in data:
+                    record["IDConvent"] = id_convent
+                    record["IDSoc"] = id_soc
+                batch.extend(data)
+                stats["success"] += 1
+                stats["total_records"] += len(data)
+            else:
+                stats["skipped"] += 1
+
+            # Flush batch tous les BATCH_SIZE appels ou en fin de boucle
+            if len(batch) >= BATCH_SIZE or i == len(to_fetch):
+                if batch:
+                    # Premier batch : autodetect=True pour créer le schéma (tout en STRING)
+                    # Batches suivants : autodetect=False pour ne pas re-détecter les types
+                    ok = bq.load_data(
+                        data=batch,
+                        dataset_id=self.bq_dataset,
+                        table_id="TarifConvention",
+                        write_disposition="WRITE_APPEND",
+                        stringify=True,
+                        autodetect=not table_initialized
+                    )
+                    if ok:
+                        table_initialized = True
+                    else:
+                        stats["failed"] += len(batch)
+                        stats["success"] -= len(batch)
+                    batch = []
+                    logger.info(f"  → {i}/{len(to_fetch)} conventions traitées")
+
+        logger.info(f"✅ TarifConvention — succès: {stats['success']}, "
+                    f"échecs: {stats['failed']}, vides: {stats['skipped']}")
+        return stats
+
     def run(self, endpoints_config: List[Dict], credentials_path: str = None) -> Dict:
         """
         Exécute le pipeline complet d'extraction
@@ -155,14 +356,20 @@ class APIExtractor:
                 else:
                     stats["failed"] += 1
             
+            # Extraction incrémentale des TarifConvention
+            tarif_stats = self.extract_tarif_conventions(bq)
+            stats["success"] += tarif_stats["success"]
+            stats["failed"] += tarif_stats["failed"]
+            stats["total_records"] += tarif_stats["total_records"]
+
             stats["duration"] = time.time() - start_time
-            
+
             logger.info(f"\n========== ✅ EXTRACTION SOFIA TERMINEE ==========")
             logger.info(f"⏱️  Durée : {stats['duration']:.2f}s")
             logger.info(f"✅ Succès : {stats['success']}/{len(endpoints_config)}")
             logger.info(f"❌ Échecs : {stats['failed']}")
             logger.info(f"📊 Total : {stats['total_records']} enregistrements")
-            
+
             return stats
             
         except Exception as e:
@@ -185,26 +392,46 @@ class BigQueryLoader:
         self.project_id = project_id
         logger.info(f"Client BigQuery initialisé pour le projet {project_id}")
     
+    @staticmethod
+    def _stringify_leaves(record: Dict) -> Dict:
+        """Convertit toutes les valeurs feuilles en STRING pour éviter les conflits de type BQ."""
+        result = {}
+        for key, value in record.items():
+            if isinstance(value, dict):
+                result[key] = BigQueryLoader._stringify_leaves(value)
+            elif isinstance(value, list) and value and isinstance(value[0], dict):
+                result[key] = [BigQueryLoader._stringify_leaves(item) for item in value]
+            elif value is None:
+                result[key] = None
+            else:
+                result[key] = str(value)
+        return result
+
     def load_data(self, data: List[Dict], dataset_id: str, table_id: str,
-                  write_disposition: str = "WRITE_APPEND") -> bool:
+                  write_disposition: str = "WRITE_APPEND",
+                  stringify: bool = False,
+                  autodetect: bool = True) -> bool:
         """Charge les données dans BigQuery"""
         if not data:
             logger.warning(f"Aucune donnée à charger pour {dataset_id}.{table_id}")
             return False
-        
+
         try:
             cleaned_data = []
             for record in data:
                 cleaned_record = self._clean_field_names(record)
+                if stringify:
+                    cleaned_record = self._stringify_leaves(cleaned_record)
                 cleaned_record['_extracted_at'] = datetime.now().isoformat()
                 cleaned_data.append(cleaned_record)
-            
+
             table_ref = f"{self.project_id}.{dataset_id}.{table_id}"
-            
+
             job_config = bigquery.LoadJobConfig(
                 write_disposition=write_disposition,
-                autodetect=True,
+                autodetect=autodetect,
                 source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+                schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
             )
             
             job = self.client.load_table_from_json(
@@ -236,9 +463,21 @@ class BigQueryLoader:
         
         return cleaned
     
+    def query(self, sql: str) -> List[Dict]:
+        """Exécute une requête SQL et retourne les résultats sous forme de liste de dicts"""
+        try:
+            results = self.client.query(sql).result()
+            return [dict(row) for row in results]
+        except Exception as e:
+            logger.warning(f"⚠️ Requête BQ échouée : {e}")
+            return []
+
     def _save_backup(self, data: List[Dict], dataset_id: str, table_id: str):
         """Sauvegarde locale en cas d'échec"""
-        backup_file = f"backup_{dataset_id}_{table_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        import os
+        backup_dir = "backups"
+        os.makedirs(backup_dir, exist_ok=True)
+        backup_file = os.path.join(backup_dir, f"backup_{dataset_id}_{table_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
         try:
             with open(backup_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
@@ -246,69 +485,3 @@ class BigQueryLoader:
         except Exception as e:
             logger.error(f"❌ Impossible de créer le backup : {e}")
 
-
-# ============================================================
-# Pour exécuter extract_sofia.py directement
-# ============================================================
-if __name__ == "__main__":
-    
-    monthly_periods = generate_monthly_periods('2024-01-01', '2024-31-01')
-
-    # Configuration standalone
-    API_CONFIG = {
-        'API_BASE_URL' : "https://envergure.sc-form.net",
-        'API_USERNAME' : "nelson@avdata.fr",
-        'API_PASSWORD' : "EGMKQ6WmpxZnMRQ@"
-    }
-    
-    BQ_CONFIG = {
-        'BQ_PROJECT_ID':"dynamic-camp-465312-b6",
-        'BQ_DATASET_ID':"Extract_Sofia",
-        'BQ_CREDENTIALS_PATH': None
-    }
-    
-    sofia_endpoints = []
-    sofia_endpoints.append(  {
-            "endpoint": "/SofiaEDC/API/Entite/GetEntite",
-            "params": {"IDSociete": 2, "ACTION": "ACTION"},
-            "table": "entites"
-        })
-    sofia_endpoints.append({
-            "endpoint": "/SofiaEDC/API/Entite/GetEntite",
-            "params": {"IDSociete": 3, "ACTION": "INSCRIT"},
-            "table": "Inscrite_Soc_3"
-        })
-    for period in monthly_periods:
-        sofia_endpoints.append({
-            "endpoint": "/SofiaEDC/API/PresenceSta/GetSeance",
-            "params": {
-                "IDSociete": 4, 
-                "Debut": period['Debut'], 
-                "Fin": period['Fin']
-            },
-            "table": "Presence_Soc_4"  # ← Même table pour tous !
-            })
-    for period in monthly_periods:
-        sofia_endpoints.append({
-            "endpoint": "/SofiaEDC/API/PresenceSta/GetSeance",
-            "params": {
-                "IDSociete": 3, 
-                "Debut": period['Debut'], 
-                "Fin": period['Fin']
-            },
-            "table": "Presence_Soc_3"  # ← Même table pour tous !
-            })
-    for period in monthly_periods:
-        sofia_endpoints.append({
-            "endpoint": "/SofiaEDC/API/PresenceSta/GetSeance",
-            "params": {
-                "IDSociete": 2, 
-                "Debut": period['Debut'], 
-                "Fin": period['Fin']
-        },
-            "table": "Presence_Soc_2"  # ← Même table pour tous !
-            })
-    
-    # Lancement standalone
-    extractor = APIExtractor(API_CONFIG, BQ_CONFIG)
-    results = extractor.run(sofia_endpoints, credentials_path=None)
