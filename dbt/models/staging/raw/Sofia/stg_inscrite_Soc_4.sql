@@ -1,5 +1,5 @@
 with source as (
-    select * from {{ source('sofia', 'Inscrite_Soc_2') }}
+    select * from {{ source('sofia', 'Inscrite_Soc_4') }}
 ),
 
 renamed as (

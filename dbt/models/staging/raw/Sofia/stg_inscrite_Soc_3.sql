@@ -90,8 +90,25 @@ renamed as (
         stg.Adresse.Code_Insee as stg_code_insee,
         stg.Adresse.Ville as stg_ville,
         stg.Adresse.Arrondissement as stg_arrondissement,
-        stg.Adresse.Pays as stg_pays
-        
+        stg.Adresse.Pays as stg_pays,
+
+        -- Convention (préfixe conv_)
+        source.Convention.ID                as conv_id,
+        source.Convention._id               as conv_internal_id,
+        source.Convention.Numero_financeur  as conv_numero_financeur,
+        source.Convention.Numero_interne    as conv_numero_interne,
+        source.Convention.Reference         as conv_reference,
+        source.Convention.Libelle2          as conv_libelle2,
+        source.Convention.NumLot            as conv_num_lot,
+        source.Convention.Date_Rupture      as conv_date_rupture,
+        source.Convention.IDSociete         as conv_id_societe,
+        source.Convention.Commercial        as conv_commercial,
+        source.Convention.Client.ID         as conv_client_id,
+        source.Convention.Client.Nom        as conv_client_nom,
+        source.Convention.Client.Sigle      as conv_sigle,
+        source.Convention.Financeur.ID      as conv_financeur_id,
+        source.Convention.Financeur.Nom     as conv_financeur_nom
+
     FROM source,
     UNNEST([source.formateur_referent]) as fr,
     UNNEST([source.stagiaire]) as stg

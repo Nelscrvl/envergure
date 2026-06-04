@@ -170,7 +170,7 @@ LEFT JOIN {{(ref("stg_prime_compile"))}} p
 ajout_note AS (
 SELECT
 ap.*,
-CASE WHEN ap.marche IN("ATR","ESPR") AND rnk_lc =1 THEN 1 
+CASE WHEN ap.marche IN("ATR","ESPR","VS2","SPR") AND rnk_lc =1 THEN 1 
 ELSE 0
 END AS dont_nb_sessions,
 CASE WHEN REGEXP_CONTAINS(CAST(sd.note_globale AS STRING), r'^\d+$') THEN CAST(sd.note_globale AS INT64) ELSE NULL END AS note_globale
