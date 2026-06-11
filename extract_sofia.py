@@ -431,8 +431,13 @@ class BigQueryLoader:
                 write_disposition=write_disposition,
                 autodetect=autodetect,
                 source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
-                schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
             )
+            # ALLOW_FIELD_ADDITION est incompatible avec WRITE_TRUNCATE
+            # (table non partitionnée) -> ne l'ajouter qu'en mode APPEND.
+            if write_disposition == "WRITE_APPEND":
+                job_config.schema_update_options = [
+                    bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION
+                ]
             
             job = self.client.load_table_from_json(
                 cleaned_data, table_ref, job_config=job_config
