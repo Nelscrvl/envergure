@@ -70,5 +70,26 @@ sources:
 
 
   - name: Importation_gsheet
-    tables: 
-    - name: stg_satisfaction_de 
+    tables:
+    - name: stg_satisfaction_de
+
+  - name: airtable_raw
+    schema: 0_airtable_raw  # base Airtable "Dimensions" chargée par extract_airtable.py
+    description: "Référentiels gérés dans Airtable (base Dimensions), chargés bruts. Champs liens/lookups = ARRAY ; l'_airtable_id sert de clé de jointure (= rec... référencé ailleurs)."
+    tables:
+      - name: dim_items_cex
+      - name: dim_rh
+      - name: dim_territoires_su
+      - name: ref_departements
+      - name: dim_affectation_bu_exceptions
+      - name: dim_agences
+      - name: dim_adv
+      - name: dim_marches
+      - name: dim_financeurs
+      - name: dim_sous_financeurs
+      - name: dim_sites_boussole
+      - name: fait_ca
+      - name: fait_book_raw
+      - name: fait_cuba_raw
+      - name: fait_loyers_saisie
+      - name: fait_loyers_affectation
