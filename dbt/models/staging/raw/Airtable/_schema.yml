@@ -1,0 +1,115 @@
+version: 2
+
+models:
+  - name: stg_airtable_dim_adv
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
+  - name: stg_airtable_dim_affectation_bu_exceptions
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
+  - name: stg_airtable_dim_agences
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
+  - name: stg_airtable_dim_financeurs
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
+  - name: stg_airtable_dim_items_cex
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
+  - name: stg_airtable_dim_marches
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
+  - name: stg_airtable_dim_rh
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
+  - name: stg_airtable_dim_sites_boussole
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
+  - name: stg_airtable_dim_sous_financeurs
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
+  - name: stg_airtable_dim_territoires_su
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
+  - name: stg_airtable_fait_book_raw
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
+  - name: stg_airtable_fait_ca
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
+  - name: stg_airtable_fait_cuba_raw
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
+  - name: stg_airtable_fait_loyers_affectation
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
+  - name: stg_airtable_fait_loyers_saisie
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
+  - name: stg_airtable_ref_departements
+    columns:
+      - name: airtable_id
+        description: "Identifiant record Airtable (clé de jointure des liens)."
+        data_tests:
+          - unique
+          - not_null
