@@ -7,6 +7,22 @@ models:
       Bénéficiaires enrichis des données de facturation (FULL JOIN stg_benef × stg_facture).
       id_benef peut être NULL si une facture n'a pas de correspondance bénéficiaire.
 
+  - name: int_convention_pilotage
+    description: "Pilotage financier à la maille convention — joint stg_convention, int_tarif_convention et Int_inscrit_formation pour exposer objectifs BDC, réalisé heures et KPIs (taux consommation, H/inscrit)."
+    columns:
+      - name: id_convention
+        tests: [not_null]
+      - name: id_societe
+        tests: [not_null]
+
+  - name: int_tarif_convention
+    description: "Tarifs de convention agrégés par (id_convention, id_societe) — somme des tranches principale et secondaires, lignes vides exclues."
+    columns:
+      - name: id_convention
+        tests: [not_null]
+      - name: id_societe
+        tests: [not_null]
+
   - name: int_facture
     description: "Factures enrichies des informations bénéficiaire (agence, conseiller, référent, dates prestation)."
     columns:

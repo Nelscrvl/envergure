@@ -1,0 +1,15 @@
+version: 2
+
+models:
+
+  - name: mrt_inscrit_formation
+    description: "Table mart — inscriptions avec heures réalisées, absence et stage. Expose Int_inscrit_formation."
+
+  - name: mrt_formateur_heures
+    description: "Table mart — heures formateur par action. Expose int_formateur_heures."
+
+  - name: mrt_inscrit_pilotage
+    description: "Table mart — pilotage par stagiaire : heures prévues vs réalisées, taux de réalisation, CA généré."
+    columns:
+      - name: id_inscription
+        tests: [not_null]

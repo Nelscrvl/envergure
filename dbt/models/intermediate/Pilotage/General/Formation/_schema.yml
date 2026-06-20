@@ -1,0 +1,21 @@
+version: 2
+
+models:
+
+  - name: Int_inscrit_formation
+    description: "Inscriptions enrichies des heures réalisées (présence), heures absence et heures de stage. Grain : 1 ligne par inscription."
+    columns:
+      - name: ID
+        tests: [not_null, unique]
+
+  - name: int_formateur_heures
+    description: "Heures formateur agrégées par (intervenant × action). Grain : 1 ligne par formateur × action."
+    columns:
+      - name: intervenant_id
+        tests: [not_null]
+
+  - name: int_inscrit_pilotage
+    description: "Inscriptions enrichies des objectifs BDC et du CA généré par stagiaire. Joint Int_inscrit_formation × int_convention_pilotage."
+    columns:
+      - name: id_inscription
+        tests: [not_null]
