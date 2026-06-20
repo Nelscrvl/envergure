@@ -27,6 +27,9 @@ models:
       Pilotage:
         General:
           +materialized: table
+          Formation:
+            int_inscrit_pilotage:
+              +materialized: view
     mart:
       +schema: sie_emploi
       +materialized: table

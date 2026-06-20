@@ -17,7 +17,7 @@ renamed as (
         cast(seance.Module_Prevu as string) as module_prevu,
         cast(seance.Type_Seance as string) as type_seance,
         cast(seance.Libelle_Type_Seance as string) as libelle_type_seance,
-        seance.Duree  as duree_seance,
+        SAFE_CAST(seance.Duree as TIME)  as duree_seance,
         cast(seance.Debut as string) as heure_debut,
         cast(seance.Fin as string) as heure_fin_seance,
         seance.Distancielle as distancielle,
@@ -30,7 +30,7 @@ renamed as (
         -- =========================
         cast(seance.LTypAbsen as string) as type_absence_libelle,
         SAFE_CAST(seance.IDTypAbsen as INT64) as type_absence_id,
-        seance.Duree_Absence  as duree_absence,
+        SAFE_CAST(seance.Duree_Absence as TIME)  as duree_absence,
         cast(seance.Debut_Absence as string) as debut_absence,
         cast(seance.Fin_Absence as string) as fin_absence,
 
@@ -99,7 +99,7 @@ renamed as (
         IDAction  as id_action,
         cast(source.Fin as string) as source_fin,
         cast(source.Libelle_Court as string) as source_libelle_court,
-        source.Duree  as source_duree,
+        SAFE_CAST(source.Duree as TIME)  as source_duree,
         cast(source.Libelle_Lieu as string) as source_libelle_lieu,
         cast(source.Libelle as string) as source_libelle,
 

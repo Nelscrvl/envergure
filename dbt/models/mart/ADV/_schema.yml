@@ -2,5 +2,8 @@ version: 2
 
 models:
 
+  - name: mrt_convention_pilotage
+    description: "Pilotage convention — objectifs BDC, réalisé heures/stagiaires et KPIs financiers (taux consommation, H/inscrit, taux réalisation centre/entreprise)."
+
   - name: mrt_adv_facture
     description: "Table mart ADV — bénéficiaires enrichis de la facturation (expose int_adv)."

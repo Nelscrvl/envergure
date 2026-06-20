@@ -56,6 +56,7 @@ sources:
       - name: Stage_Soc_2
       - name: Stage_Soc_3
       - name: entites
+      - name: TarifConvention
 
   - name: prime_raw
     tables:
@@ -69,6 +70,16 @@ sources:
 
 
 
+  - name: teo
+    schema: teo_extract
+    tables:
+      - name: activity
+      - name: dossier
+      - name: externalLink
+      - name: externalLinkFormResponse
+      - name: location
+      - name: teoformResponse
+
   - name: Importation_gsheet
-    tables: 
-    - name: stg_satisfaction_de 
+    tables:
+    - name: stg_satisfaction_de

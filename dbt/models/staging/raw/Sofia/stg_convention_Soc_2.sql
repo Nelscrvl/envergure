@@ -57,10 +57,10 @@ with source as (
         Libelle_Frais_1EREQUIP,
         Date_Debut,
 
-        -- ContactClient
-        ContactClient.Nom           as contact_client_nom,
-        ContactClient.ID            as contact_client_id,
-        ContactClient._id           as contact_client_internal_id,
+        -- ContactClient (STRING/JSON in Soc_2, unlike Soc_4 which is STRUCT)
+        JSON_VALUE(ContactClient, '$.Nom')  as contact_client_nom,
+        JSON_VALUE(ContactClient, '$.ID')   as contact_client_id,
+        JSON_VALUE(ContactClient, '$._id')  as contact_client_internal_id,
 
         Libelle2,
 
