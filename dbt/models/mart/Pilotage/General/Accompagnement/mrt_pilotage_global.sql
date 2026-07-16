@@ -1,3 +1,3 @@
-SELECT 
+SELECT
 *
-FROM {{ref('int_pilotage_global')}}
+FROM {{ref('int_pilotage_accompagnement')}}
