@@ -15,45 +15,12 @@ date_fin_theo,
 date_fin_prest,
 id_presta_coll,
 lot,
+cp_benef,
 CASE
   WHEN split(lot, ' ')[safe_offset(0)] = ''
   THEN SUBSTR(numero_commande, 3, 3)
   ELSE split(lot, ' ')[safe_offset(0)]
 END AS marche,
-CASE
-  -- Outre-mer (noms uniques, pas d'ambiguïté)
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bMAYOTTE\b')                              THEN 'MAYOTTE'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bGUADELOUPE\b|\bGUAD\b')                 THEN 'GUADELOUPE'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bMARTINIQUE\b')                           THEN 'MARTINIQUE'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bRÉUNION\b|\bREUNION\b|\bRN\b')          THEN 'REUNION'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bRM\b')                                   THEN 'REUNION-MARTINIQUE'  -- à confirmer avec métier
-
-  -- Patterns multi-mots en premier (avant les abbréviations courtes)
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bGRAND[\s_-]?EST\b|\bCHAMPAGNE\b|\bLORRAINE\b|\bALSACE\b') THEN 'GRAND EST'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bHAUTS[\s-]DE[\s-]FRANCE\b')             THEN 'HAUTS-DE-FRANCE'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bNOUVELLE[\s-]AQUITAINE\b')              THEN 'NOUVELLE-AQUITAINE'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bCENTRE[\s-]VAL\b|\bEURE ET LOIR\b')    THEN 'CENTRE-VAL DE LOIRE'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bBOURGOGNE\b|\bFRANCHE[\s-]COMT')       THEN 'BOURGOGNE-FRANCHE-COMTE'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bSEINE[\s-]MARITIME\b|\bNORMANDIE\b')   THEN 'NORMANDIE'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bAUVERGNE\b')                            THEN 'AUVERGNE-RHONE-ALPES'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bPAYS[\s-]DE[\s-]LA[\s-]LOIRE\b')       THEN 'PAYS DE LA LOIRE'
-
-  -- Abréviations courtes (word boundary \b essentiel)
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bGDEST\b|\bGE\b')                        THEN 'GRAND EST'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bBFC\b|\bFC\b|\bBG\b')                   THEN 'BOURGOGNE-FRANCHE-COMTE'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bNOR\b|\bNORM\b|\bHN\b')                 THEN 'NORMANDIE'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bBRETAGNE\b')                            THEN 'BRETAGNE'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bHDF\b')                                  THEN 'HAUTS-DE-FRANCE'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bIDF\b')                                  THEN 'ILE-DE-FRANCE'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bPACA\b')                                 THEN 'PACA'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bPDL\b')                                  THEN 'PAYS DE LA LOIRE'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bNAQ\b')                                  THEN 'NOUVELLE-AQUITAINE'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bAURA\b|\bARA\b')                        THEN 'AUVERGNE-RHONE-ALPES'
-  WHEN REGEXP_CONTAINS(lot, r'(?i)\bCVL\b|\bCENTRE\b')                      THEN 'CENTRE-VAL DE LOIRE'
-
-  ELSE NULL  -- cas non résolu
-END AS region
-,
 COALESCE(
   -- P1 : mot-clé LOT explicite (LOT 3, LOT_3, LOT3, LOT100, _Lot 3_, etc.)
   REGEXP_EXTRACT(lot, r'(?i)(?:^|[\s_])LOT[_\s]*(\d{1,3})(?:[_\s]|$)'),
@@ -76,11 +43,57 @@ FROM {{ref("stg_benef")}}
 
 ),
 
+region_data AS (
+
+SELECT
+    *,
+    CASE
+      -- Outre-mer (noms uniques, pas d'ambiguïté)
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bMAYOTTE\b')                              THEN 'MAYOTTE'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bGUADELOUPE\b|\bGUAD\b')                 THEN 'GUADELOUPE'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bMARTINIQUE\b')                           THEN 'MARTINIQUE'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bRÉUNION\b|\bREUNION\b|\bRN\b')          THEN 'REUNION'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bRM\b')                                   THEN 'REUNION-MARTINIQUE'  -- à confirmer avec métier
+
+      -- Patterns multi-mots en premier (avant les abbréviations courtes)
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bGRAND[\s_-]?EST\b|\bCHAMPAGNE\b|\bLORRAINE\b|\bALSACE\b') THEN 'GRAND EST'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bHAUTS[\s-]DE[\s-]FRANCE\b')             THEN 'HAUTS-DE-FRANCE'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bNOUVELLE[\s-]AQUITAINE\b')              THEN 'NOUVELLE-AQUITAINE'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bCENTRE[\s-]VAL\b|\bEURE ET LOIR\b')    THEN 'CENTRE-VAL DE LOIRE'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bBOURGOGNE\b|\bFRANCHE[\s-]COMT')       THEN 'BOURGOGNE-FRANCHE-COMTE'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bSEINE[\s-]MARITIME\b|\bNORMANDIE\b')   THEN 'NORMANDIE'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bAUVERGNE\b')                            THEN 'AUVERGNE-RHONE-ALPES'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bPAYS[\s-]DE[\s-]LA[\s-]LOIRE\b')       THEN 'PAYS DE LA LOIRE'
+
+      -- Abréviations courtes (word boundary \b essentiel)
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bGDEST\b|\bGE\b')                        THEN 'GRAND EST'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bBFC\b|\bFC\b|\bBG\b')                   THEN 'BOURGOGNE-FRANCHE-COMTE'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bNOR\b|\bNORM\b|\bHN\b')                 THEN 'NORMANDIE'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bBRETAGNE\b')                            THEN 'BRETAGNE'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bHDF\b')                                  THEN 'HAUTS-DE-FRANCE'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bIDF\b')                                  THEN 'ILE-DE-FRANCE'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bPACA\b')                                 THEN 'PACA'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bPDL\b')                                  THEN 'PAYS DE LA LOIRE'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bNAQ\b')                                  THEN 'NOUVELLE-AQUITAINE'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bAURA\b|\bARA\b')                        THEN 'AUVERGNE-RHONE-ALPES'
+      WHEN REGEXP_CONTAINS(lot, r'(?i)\bCVL\b|\bCENTRE\b')                      THEN 'CENTRE-VAL DE LOIRE'
+
+      -- Fallback marché UES : lot vide -> région déduite du département du bénéficiaire (cp_benef)
+      -- cp_benef perd parfois son zéro initial (ex. "3200" pour "03200") d'où le LPAD avant lecture du département
+      WHEN marche = 'UES' AND REGEXP_CONTAINS(LPAD(TRIM(cp_benef), 5, '0'), r'^(04|05|06|13|83|84)')                         THEN 'PACA'
+      WHEN marche = 'UES' AND REGEXP_CONTAINS(LPAD(TRIM(cp_benef), 5, '0'), r'^(01|03|07|15|26|38|42|43|63|69|73|74)')       THEN 'AUVERGNE-RHONE-ALPES'
+
+      ELSE NULL  -- cas non résolu
+    END AS region
+FROM prep_data
+
+),
+
 classification as (
 
-SELECT 
+SELECT
     *,
-    CASE 
+    CASE
         WHEN activite = 1 AND statut = "N'a pas adhéré" THEN 0
         WHEN activite = 1 AND statut IN ("Prestation aboutie", "Sortie anticipée", "Prestation en cours") THEN 1
         ELSE NULL
@@ -143,7 +156,7 @@ CASE WHEN statut NOT IN ("Demande sans suite","Annulé","Ne s'est pas présenté
     END AS recu,
 CAST(FORMAT_DATE('%Y%m', date_demarrage) AS INT64) AS annee_mois_sort
 
-FROM prep_data
+FROM region_data
 
 ),
 
