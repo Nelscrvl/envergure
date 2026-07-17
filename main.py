@@ -4,10 +4,33 @@ Orchestration principale - Exécute les deux extractions
 
 import os
 import logging
+import subprocess
 import time
+import base64
 from datetime import datetime
 from extract_si_emploi import MySQLExtractor
 from extract_sofia import APIExtractor, build_sofia_endpoints
+
+import requests as _requests
+import google.auth
+import google.auth.transport.requests
+
+
+def _get_ssh_key(project_id: str) -> str:
+    local_path = os.getenv('SSH_KEY_PATH')
+    if local_path:
+        return open(local_path).read()
+    credentials, _ = google.auth.default(
+        scopes=['https://www.googleapis.com/auth/cloud-platform']
+    )
+    credentials.refresh(google.auth.transport.requests.Request())
+    url = (
+        f"https://secretmanager.googleapis.com/v1/projects/{project_id}"
+        f"/secrets/Ssh_Rsa/versions/latest:access"
+    )
+    resp = _requests.get(url, headers={"Authorization": f"Bearer {credentials.token}"})
+    resp.raise_for_status()
+    return base64.b64decode(resp.json()["payload"]["data"]).decode("UTF-8")
 
 
 def _load_env(path='.env'):
@@ -63,7 +86,7 @@ def main():
         'ssh': {
             'user': 'envergure',
             'host': 'app02027.global-sp.net',
-            'key': open('/Users/nelson/envergures').read()  # ⬅️ Vérifier le chemin
+            'key': _get_ssh_key(GCP_PROJECT_ID)
         },
         'mysql': {
             'user': 'utilENVERGURE',
@@ -85,7 +108,7 @@ def main():
     try:
         sofia_extractor = APIExtractor(sofia_config['api'], sofia_config['bq'])
         sofia_stats = sofia_extractor.run(
-            endpoints_config=build_sofia_endpoints('2026-01-01', '2026-06-30'),
+            endpoints_config=build_sofia_endpoints('2026-01-01', datetime.now().strftime('%Y-%m-%d')),
             credentials_path=None
         )
     except Exception as e:
@@ -121,12 +144,16 @@ def main():
     logger.info(f"   📈 Enregistrements : {mysql_stats['total_records']:,}")
     logger.info("="*80 + "\n")
 
+    # ==========================================================================
+    # RÉSUMÉ
+    # ==========================================================================
+
     total_failures = sofia_stats['failed'] + mysql_stats['failed']
     if total_failures > 0:
-        logger.warning(f"⚠️  {total_failures} échecs au total")
+        logger.warning(f"⚠️  Échecs au total (extraction)")
         exit(1)
 
-    logger.info("✅ Pipeline quotidien terminé avec succès !")
+    logger.info("✅ Extraction terminée avec succès — le job dbt-build prend le relai.")
 
 
 if __name__ == "__main__":
