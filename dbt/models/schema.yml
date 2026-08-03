@@ -57,6 +57,12 @@ sources:
       - name: Stage_Soc_3
       - name: entites
       - name: TarifConvention
+      - name: Intervenant_Soc_2
+      - name: Intervenant_Soc_3
+      - name: Intervenant_Soc_4
+      - name: Tiers_Individuel_Soc_2
+      - name: Tiers_Individuel_Soc_3
+      - name: Tiers_Individuel_Soc_4
 
   - name: prime_raw
     tables:

@@ -44,7 +44,7 @@ renamed as (
         -- Adresse formateur (préfixe fr_)
         fr.Adresse.ID as fr_adresse_id,
         fr.Adresse._id as fr_adresse_internal_id,
-        fr.Adresse.NumRue as fr_numero_rue,
+        CAST(fr.Adresse.NumRue AS STRING) as fr_numero_rue,
         fr.Adresse.Adr1 as fr_adresse_ligne1,
         fr.Adresse.Adr2 as fr_adresse_ligne2,
         fr.Adresse.Adr3 as fr_adresse_ligne3,
@@ -70,7 +70,7 @@ renamed as (
         
         -- Coordonnées professionnelles stagiaire (préfixe stg_)
         stg.Email_Pro as stg_email_pro,
-        stg.Telephone_Pro as stg_telephone_pro,
+        CAST(stg.Telephone_Pro AS STRING) as stg_telephone_pro,
         stg.Mobile_Pro as stg_mobile_pro,
         
         -- Coordonnées personnelles stagiaire (préfixe stg_)
@@ -81,7 +81,7 @@ renamed as (
         -- Adresse stagiaire (préfixe stg_)
         stg.Adresse.ID as stg_adresse_id,
         stg.Adresse._id as stg_adresse_internal_id,
-        stg.Adresse.NumRue as stg_numero_rue,
+        CAST(stg.Adresse.NumRue AS STRING) as stg_numero_rue,
         stg.Adresse.Adr1 as stg_adresse_ligne1,
         stg.Adresse.Adr2 as stg_adresse_ligne2,
         stg.Adresse.Adr3 as stg_adresse_ligne3,
