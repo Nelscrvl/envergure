@@ -139,6 +139,28 @@ nb_inscrits_conv AS (
     GROUP BY conv_id, conv_id_societe
 ),
 
+-- Tiers stagiaire (examens) — pool global, même dataset pour toutes les sociétés
+tiers AS (
+    SELECT id_tiers, a_reussi_examen, a_passe_examen
+    FROM {{ ref('stg_tiers_individuel_Soc_2') }}
+),
+
+-- Satisfaction (jointure sur email stagiaire — archive exclue car emails supprimés)
+satisfaction AS (
+    SELECT LOWER(TRIM(mail)) AS mail, note_globale AS note_satisfaction
+    FROM {{ ref('stg_satisfaction_de') }}
+    WHERE REGEXP_CONTAINS(mail, r'@')
+),
+
+-- Intervenants (para_sal_1 = est_formateur_externe)
+intervenants AS (
+    SELECT intervenant_id, '2' AS id_societe, est_formateur_externe FROM {{ ref('stg_intervenant_Soc_2') }}
+    UNION ALL
+    SELECT intervenant_id, '3' AS id_societe, est_formateur_externe FROM {{ ref('stg_intervenant_Soc_3') }}
+    UNION ALL
+    SELECT intervenant_id, '4' AS id_societe, est_formateur_externe FROM {{ ref('stg_intervenant_Soc_4') }}
+),
+
 -- Dimensions convention (groupe_ou_individuelle, dates) depuis les tables convention
 conventions AS (
     SELECT
@@ -172,6 +194,14 @@ base AS (
         -- Formateur
         i.fr_formateur_id,
         CONCAT(COALESCE(i.fr_nom, ''), ' ', COALESCE(i.fr_prenom, '')) AS formateur_nom_complet,
+        COALESCE(iv.est_formateur_externe, FALSE)                        AS est_formateur_externe,
+
+        -- Examens
+        COALESCE(tr.a_passe_examen,  FALSE)                              AS a_passe_examen,
+        COALESCE(tr.a_reussi_examen, FALSE)                              AS a_reussi_examen,
+
+        -- Satisfaction
+        sat.note_satisfaction,
 
         -- Stagiaire
         i.stg_stagiaire_id,
@@ -278,6 +308,11 @@ base AS (
                                       AND bdc.id_societe    = CAST(i.conv_id_societe AS STRING)
     LEFT JOIN nb_inscrits_conv     nic ON nic.conv_id        = CAST(i.conv_id        AS STRING)
                                       AND nic.conv_id_societe = CAST(i.conv_id_societe AS STRING)
+    LEFT JOIN intervenants         iv  ON CAST(iv.intervenant_id AS STRING) = CAST(i.fr_formateur_id AS STRING)
+                                      AND iv.id_societe      = i.id_societe
+    LEFT JOIN tiers                tr  ON tr.id_tiers = CAST(i.stg_stagiaire_id AS STRING)
+    LEFT JOIN satisfaction         sat ON sat.mail = LOWER(TRIM(i.stg_email_pro))
+                                      OR sat.mail = LOWER(TRIM(i.stg_email_perso))
 )
 
 SELECT

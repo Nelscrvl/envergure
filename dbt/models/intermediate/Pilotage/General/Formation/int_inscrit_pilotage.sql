@@ -23,6 +23,10 @@ select
     -- Formateur
     i.fr_formateur_id,
     i.formateur_nom_complet,
+    i.est_formateur_externe,
+    i.a_passe_examen,
+    i.a_reussi_examen,
+    i.note_satisfaction,
 
     -- Convention — identifiants et dimensions
     i.conv_numero_financeur,
@@ -87,7 +91,8 @@ select
     ) * 100                                                                 as taux_realisation_total,
 
     -- Flags (0/1)
-    IF(SAFE_CAST(i.Date_Sortie AS DATE) < SAFE_CAST(i.Date_Sortie_Previsionnelle AS DATE),
+    IF(i.Date_Sortie IS NULL
+       OR SAFE_CAST(i.Date_Sortie AS DATE) < SAFE_CAST(i.Date_Sortie_Previsionnelle AS DATE),
        1, 0)                                                                as abandon_parcours,
     IF(i.heures_realisees >= COALESCE(i.duree_stagiaire_centre_bdc, 0),
        1, 0)                                                                as a_realise_heures_centre,
@@ -98,4 +103,4 @@ select
     IF(i.heures_realisees > 0, 1, 0)                                       as a_demarre_formation
 
 from inscrits i
--- WHERE conv_client_nom LIKE "Les Compa%"
+--WHERE  LIKE "Les Compa%"

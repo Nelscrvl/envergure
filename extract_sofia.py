@@ -192,6 +192,43 @@ def build_sofia_endpoints(start_date: str, end_date: str) -> List[Dict]:
         "stringify": True
     })
 
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/Tiers/Get",
+        "params": {"Entite": "Individuel", "IDSoc": 2},
+        "table": "Tiers_Individuel_Soc_2",
+        "stringify": True
+    })
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/Tiers/Get",
+        "params": {"Entite": "Individuel", "IDSoc": 3},
+        "table": "Tiers_Individuel_Soc_3",
+        "stringify": True
+    })
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/Tiers/Get",
+        "params": {"Entite": "Individuel", "IDSoc": 4},
+        "table": "Tiers_Individuel_Soc_4",
+        "stringify": True
+    })
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/Entite/GetEntite",
+        "params": {"IDSociete": 2, "ACTION": "INTERVENANT", "ChpPara": 1},
+        "table": "Intervenant_Soc_2",
+        "stringify": True
+    })
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/Entite/GetEntite",
+        "params": {"IDSociete": 3, "ACTION": "INTERVENANT", "ChpPara": 1},
+        "table": "Intervenant_Soc_3",
+        "stringify": True
+    })
+    endpoints.append({
+        "endpoint": "/SofiaEDC/API/Entite/GetEntite",
+        "params": {"IDSociete": 4, "ACTION": "INTERVENANT", "ChpPara": 1},
+        "table": "Intervenant_Soc_4",
+        "stringify": True
+    })
+
     return endpoints
 
 

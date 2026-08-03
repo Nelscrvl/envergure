@@ -21,9 +21,9 @@ CASE
     WHEN present IS NULL THEN "a catégoriser"
 ELSE "" 
 END AS presence,
-split(lot, ' ')[offset(0)] as marche,
-lot,
-trim(substr(lot, strpos(lot, ' ') + 1)) as lot_sans_action,
+split(rdv.lot, ' ')[offset(0)] as marche,
+rdv.lot as lot,
+trim(substr(rdv.lot, strpos(rdv.lot, ' ') + 1)) as lot_sans_action,
 organisme,
 precision_rdv
 
