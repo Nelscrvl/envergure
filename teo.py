@@ -17,17 +17,6 @@ import requests
 from google.cloud import bigquery
 from google.api_core.exceptions import Conflict
 
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler(f"extraction_{datetime.now().strftime('%Y%m%d')}.log"),
-        logging.StreamHandler(),
-    ],
-)
 logger = logging.getLogger(__name__)
 
 
@@ -45,9 +34,6 @@ def _load_env(path: str = ".env") -> None:
                 os.environ.setdefault(key.strip(), val.strip().strip("\"'"))
     except FileNotFoundError:
         pass
-
-
-_load_env()
 
 
 # ---------------------------------------------------------------------------
@@ -291,57 +277,55 @@ def _load_to_bq(
 
 
 # ---------------------------------------------------------------------------
-# Point d'entrée
+# Point d'entrée (standalone ou appelé depuis main.py)
 # ---------------------------------------------------------------------------
-def main() -> None:
+def run(gcp_project_id: str = "dynamic-camp-465312-b6") -> dict:
+    """Lance l'extraction Teo complète et retourne les stats {success, failed, total_records}."""
     logger.info("=" * 70)
     logger.info("DÉMARRAGE EXTRACTION TEO — %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     logger.info("=" * 70)
 
-    # -- Credentials depuis .env (noms identiques à la doc Teo) -----------
-    client_id = os.environ["CLIENT_ID"]
-    client_secret = os.environ["CLIENT_SECRET"]
-    teo_id = os.environ["TEO_ID"]
-    teo_base_url = os.environ["TEO_BASE_URL"]  # ex: https://teoapp.fr/api
-    gcp_project_id = os.environ.get("GCP_PROJECT_ID", "dynamic-camp-465312-b6")
+    client_id     = os.environ.get("TEO_CLIENT_ID") or os.environ["CLIENT_ID"]
+    client_secret = os.environ.get("TEO_CLIENT_SECRET") or os.environ["CLIENT_SECRET"]
+    teo_id        = os.environ["TEO_ID"]
+    teo_base_url  = os.environ["TEO_BASE_URL"]
     bq_dataset_id = "teo_extract"
 
-    teo = TeoClient(client_id, client_secret, teo_id, teo_base_url)
-    bq = bigquery.Client(project=gcp_project_id)
+    teo_client = TeoClient(client_id, client_secret, teo_id, teo_base_url)
+    bq_client  = bigquery.Client(project=gcp_project_id)
 
-    _ensure_dataset(bq, gcp_project_id, bq_dataset_id)
+    _ensure_dataset(bq_client, gcp_project_id, bq_dataset_id)
 
-    # Découverte dynamique en priorité ; fallback sur la liste statique
-    discovered = teo.discover_collections()
-    endpoints = discovered if discovered else ENDPOINTS
-    if discovered:
-        logger.info("Teo - Utilisation des endpoints découverts dynamiquement")
-    else:
-        logger.info("Teo - Utilisation de la liste statique (%d endpoints)", len(ENDPOINTS))
+    discovered = teo_client.discover_collections()
+    endpoints  = discovered if discovered else ENDPOINTS
+    logger.info(
+        "Teo - %s (%d endpoints)",
+        "découverte dynamique" if discovered else "liste statique",
+        len(endpoints),
+    )
 
-    total_tables = 0
-    total_rows = 0
+    success = failed = total_rows = 0
 
     for table_name, path in endpoints.items():
         logger.info("--- Extraction : %s (%s)", table_name, path)
         try:
-            records = list(teo.paginate(path))
-            rows = _prepare_rows(records)
-            _load_to_bq(bq, gcp_project_id, bq_dataset_id, table_name, rows)
-            total_tables += 1
+            records = list(teo_client.paginate(path))
+            rows    = _prepare_rows(records)
+            _load_to_bq(bq_client, gcp_project_id, bq_dataset_id, table_name, rows)
+            success    += 1
             total_rows += len(rows)
         except Exception as exc:
             logger.error("Erreur sur %s : %s", table_name, exc)
+            failed += 1
 
     logger.info("=" * 70)
-    logger.info(
-        "EXTRACTION TERMINÉE — %d tables, %d lignes au total — %s",
-        total_tables,
-        total_rows,
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    )
+    logger.info("EXTRACTION TEO TERMINÉE — %d tables OK, %d erreurs, %d lignes", success, failed, total_rows)
     logger.info("=" * 70)
+
+    return {"success": success, "failed": failed, "total_records": total_rows}
 
 
 if __name__ == "__main__":
-    main()
+    _load_env()
+    stats = run()
+    exit(1 if stats["failed"] else 0)

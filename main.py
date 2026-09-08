@@ -10,6 +10,7 @@ import base64
 from datetime import datetime
 from extract_si_emploi import MySQLExtractor
 from extract_sofia import APIExtractor, build_sofia_endpoints
+import teo as teo_extractor
 
 import requests as _requests
 import google.auth
@@ -107,8 +108,19 @@ def main():
 
     try:
         sofia_extractor = APIExtractor(sofia_config['api'], sofia_config['bq'])
+        _d = datetime.now()
+        def _months_ago(d, n):
+            total = d.year * 12 + (d.month - 1) - n
+            return f"{total // 12}-{total % 12 + 1:02d}-01"
+        # GetSeance (présences) : fenêtre 6 mois glissants — rapide
+        sofia_start    = _months_ago(_d, 6)
+        # Inscrite : fenêtre 24 mois pour couvrir les parcours longs (AFC 12-18 mois)
+        inscrite_start = _months_ago(_d, 24)
         sofia_stats = sofia_extractor.run(
-            endpoints_config=build_sofia_endpoints('2026-01-01', datetime.now().strftime('%Y-%m-%d')),
+            endpoints_config=build_sofia_endpoints(
+                sofia_start, _d.strftime('%Y-%m-%d'),
+                inscrite_start_date=inscrite_start
+            ),
             credentials_path=None
         )
     except Exception as e:
@@ -119,6 +131,13 @@ def main():
             'total_records': 0,
             'duration': 0
         }
+
+    logger.info("\n🔗 Lancement du pipeline Teo...")
+    try:
+        teo_stats = teo_extractor.run(GCP_PROJECT_ID)
+    except Exception as e:
+        logger.error(f"❌ Erreur critique pipeline Teo : {e}")
+        teo_stats = {'success': 0, 'failed': 1, 'total_records': 0}
 
     logger.info("\n🗄️  Lancement du pipeline MySQL...")
     mysql_extractor = MySQLExtractor(mysql_config['ssh'], mysql_config['mysql'], mysql_config['bq'])
@@ -138,6 +157,10 @@ def main():
     logger.info(f"   ✅ Succès : {sofia_stats['success']}")
     logger.info(f"   ❌ Échecs : {sofia_stats['failed']}")
     logger.info(f"   📈 Enregistrements : {sofia_stats['total_records']:,}")
+    logger.info(f"\n🔗 Teo :")
+    logger.info(f"   ✅ Succès : {teo_stats['success']}")
+    logger.info(f"   ❌ Échecs : {teo_stats['failed']}")
+    logger.info(f"   📈 Enregistrements : {teo_stats['total_records']:,}")
     logger.info(f"\n🗄️  MySQL :")
     logger.info(f"   ✅ Succès : {mysql_stats['success']}")
     logger.info(f"   ❌ Échecs : {mysql_stats['failed']}")
@@ -148,7 +171,7 @@ def main():
     # RÉSUMÉ
     # ==========================================================================
 
-    total_failures = sofia_stats['failed'] + mysql_stats['failed']
+    total_failures = sofia_stats['failed'] + teo_stats['failed'] + mysql_stats['failed']
     if total_failures > 0:
         logger.warning(f"⚠️  Échecs au total (extraction)")
         exit(1)

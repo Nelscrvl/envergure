@@ -72,8 +72,14 @@ def format_date_for_societe(date_str: str, id_societe: int) -> str:
     return date_str
 
 
-def build_sofia_endpoints(start_date: str, end_date: str) -> List[Dict]:
-    """Construit la liste complète des endpoints Sofia à extraire."""
+def build_sofia_endpoints(start_date: str, end_date: str, inscrite_start_date: str = None) -> List[Dict]:
+    """Construit la liste complète des endpoints Sofia à extraire.
+
+    start_date          : fenêtre GetSeance (présences) — typiquement 6 mois glissants
+    inscrite_start_date : fenêtre Inscrite — typiquement 24 mois pour couvrir les AFC longs
+    """
+    if inscrite_start_date is None:
+        inscrite_start_date = start_date
     monthly_periods = generate_monthly_periods(start_date, end_date)
     endpoints = []
 
@@ -135,7 +141,7 @@ def build_sofia_endpoints(start_date: str, end_date: str) -> List[Dict]:
         "params": {
             "IDSociete": 3,
             "ACTION": "INSCRIT",
-            "DebutInscription": format_date_for_societe("2026-01-01", 3),
+            "DebutInscription": format_date_for_societe(inscrite_start_date, 3),
             "LimiteDebutInscription": format_date_for_societe(end_date, 3),
         },
         "table": "Inscrite_Soc_3",
@@ -146,7 +152,7 @@ def build_sofia_endpoints(start_date: str, end_date: str) -> List[Dict]:
         "params": {
             "IDSociete": 4,
             "ACTION": "INSCRIT",
-            "DebutInscription": "2026-01-01",
+            "DebutInscription": inscrite_start_date,
             "LimiteDebutInscription": end_date,
         },
         "table": "Inscrite_Soc_4",
@@ -157,7 +163,7 @@ def build_sofia_endpoints(start_date: str, end_date: str) -> List[Dict]:
         "params": {
             "IDSociete": 2,
             "ACTION": "INSCRIT",
-            "DebutInscription": "2026-01-01",
+            "DebutInscription": inscrite_start_date,
             "LimiteDebutInscription": end_date,
         },
         "table": "Inscrite_Soc_2",

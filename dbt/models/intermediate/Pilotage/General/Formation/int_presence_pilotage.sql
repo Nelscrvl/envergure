@@ -19,12 +19,43 @@ intervenants AS (
     FROM {{ ref('stg_intervenant_Soc_4') }}
 ),
 
+-- Dimensions action depuis le modèle inscrit (dédupliquées par action)
+dims_action AS (
+    SELECT DISTINCT
+        CAST(IDAction AS STRING)        AS id_action,
+        CAST(conv_id_societe AS STRING) AS id_societe,
+        Libelle_Court_Parcours          AS libelle_parcours,
+        Type_Region                     AS type_region,
+        conv_numero_financeur,
+        conv_client_nom,
+        nom_type_tarif
+    FROM {{ ref('Int_inscrit_formation') }}
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY CAST(IDAction AS STRING), CAST(conv_id_societe AS STRING) ORDER BY IDAction) = 1
+),
+
+-- Nom complet formateur depuis les intervenants
+noms_intervenants AS (
+    SELECT
+        CAST(intervenant_id AS STRING) AS intervenant_id,
+        '2' AS id_societe,
+        CONCAT(COALESCE(Nom, ''), ' ', COALESCE(Prenom, '')) AS formateur_nom_complet
+    FROM {{ ref('stg_intervenant_Soc_2') }}
+    UNION ALL
+    SELECT CAST(intervenant_id AS STRING), '3',
+        CONCAT(COALESCE(Nom, ''), ' ', COALESCE(Prenom, ''))
+    FROM {{ ref('stg_intervenant_Soc_3') }}
+    UNION ALL
+    SELECT CAST(intervenant_id AS STRING), '4',
+        CONCAT(COALESCE(Nom, ''), ' ', COALESCE(Prenom, ''))
+    FROM {{ ref('stg_intervenant_Soc_4') }}
+),
+
 -- Déduplication : une séance par (formateur × action × date × heure_debut)
 sessions AS (
     SELECT DISTINCT
         CAST(intervenant_id AS STRING)  AS intervenant_id,
-        id_action,
-        SAFE_CAST(date_date AS DATE)    AS date_date,
+        CAST(id_action AS STRING)       AS id_action,
+        SAFE_CAST(LEFT(date_date, 10) AS DATE) AS date_date,
         heure_debut,
         id_societe,
         code_analytique_parcours,
@@ -45,8 +76,20 @@ SELECT
     s.heure_debut,
     s.id_societe,
     s.heures_seance,
-    COALESCE(iv.est_formateur_externe, FALSE)                AS est_formateur_externe
+    COALESCE(iv.est_formateur_externe, FALSE)                AS est_formateur_externe,
+    ni.formateur_nom_complet,
+    da.libelle_parcours,
+    da.type_region,
+    da.conv_numero_financeur,
+    da.conv_client_nom,
+    da.nom_type_tarif
 FROM sessions s
 LEFT JOIN intervenants iv
     ON  iv.intervenant_id = s.intervenant_id
     AND iv.id_societe     = s.id_societe
+LEFT JOIN noms_intervenants ni
+    ON  ni.intervenant_id = s.intervenant_id
+    AND ni.id_societe     = s.id_societe
+LEFT JOIN dims_action da
+    ON  da.id_action  = s.id_action
+    AND da.id_societe = s.id_societe

@@ -11,5 +11,13 @@ models:
   - name: mrt_inscrit_pilotage
     description: "Table mart — pilotage par stagiaire : heures prévues vs réalisées, taux de réalisation, CA généré."
     columns:
-      - name: id_inscription
+      - name: stg_stagiaire_id
+        tests: [not_null]
+
+  - name: mrt_presence_stagiaire
+    description: "Table mart — présences datées par stagiaire (grain séance). Expose int_presence_stagiaire."
+    columns:
+      - name: stagiaire_id
+        tests: [not_null]
+      - name: date_seance
         tests: [not_null]

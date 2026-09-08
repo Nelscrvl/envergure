@@ -16,6 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY main.py .
 COPY extract_sofia.py .
 COPY extract_si_emploi.py .
+COPY teo.py .
 
 # Projet dbt (modèles, macros, seeds, packages)
 COPY dbt/ ./dbt/

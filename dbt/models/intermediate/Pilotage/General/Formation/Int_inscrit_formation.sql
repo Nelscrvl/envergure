@@ -11,7 +11,8 @@ dedup_inscrite AS (
         * EXCEPT(stg_adresse_internal_id, stg_stagiaire_internal_id),
         CASE WHEN fr_formateur_id IS NULL THEN 0 ELSE 1 END AS presence
     FROM union_inscrite
-    QUALIFY ROW_NUMBER() OVER (PARTITION BY ID ORDER BY IDAction) = 1
+    -- Soc_2 = Soc_4 (données identiques) : on déduplique sur ID seul, Soc_2 prioritaire
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ID ORDER BY CAST(id_societe AS INT64), IDAction) = 1
 ),
 
 union_presence AS (
@@ -117,15 +118,15 @@ jours_ouvres AS (
         (
             SELECT COUNT(*)
             FROM UNNEST(GENERATE_DATE_ARRAY(
-                SAFE_CAST(Date_Entree              AS DATE),
-                SAFE_CAST(Date_Sortie_Previsionnelle AS DATE)
+                SAFE_CAST(LEFT(Date_Entree, 10)               AS DATE),
+                SAFE_CAST(LEFT(Date_Sortie_Previsionnelle, 10) AS DATE)
             )) AS d
-            WHERE EXTRACT(DAYOFWEEK FROM d) NOT IN (1, 7)  -- 1=Dimanche, 7=Samedi
+            WHERE EXTRACT(DAYOFWEEK FROM d) NOT IN (1, 7)
         ) AS nb_jours_ouvres
     FROM dedup_inscrite
     WHERE Date_Entree IS NOT NULL
       AND Date_Sortie_Previsionnelle IS NOT NULL
-      AND SAFE_CAST(Date_Entree AS DATE) <= SAFE_CAST(Date_Sortie_Previsionnelle AS DATE)
+      AND SAFE_CAST(LEFT(Date_Entree, 10) AS DATE) <= SAFE_CAST(LEFT(Date_Sortie_Previsionnelle, 10) AS DATE)
 ),
 
 -- Nb total d'inscrits par convention — pour ca_prevu_par_inscrit
@@ -145,11 +146,37 @@ tiers AS (
     FROM {{ ref('stg_tiers_individuel_Soc_2') }}
 ),
 
--- Satisfaction (jointure sur email stagiaire — archive exclue car emails supprimés)
+-- Satisfaction — dédupliquée par email (une note par email)
 satisfaction AS (
     SELECT LOWER(TRIM(mail)) AS mail, note_globale AS note_satisfaction
     FROM {{ ref('stg_satisfaction_de') }}
     WHERE REGEXP_CONTAINS(mail, r'@')
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY LOWER(TRIM(mail)) ORDER BY Horodateur DESC) = 1
+),
+
+-- Satisfaction — fallback par nom+prénom+date_fin (pour les sans email)
+satisfaction_by_name AS (
+    SELECT
+        LOWER(TRIM(prenom)) AS prenom,
+        LOWER(TRIM(nom))    AS nom,
+        COALESCE(
+            SAFE_CAST(date_fin AS DATE),
+            SAFE.PARSE_DATE('%d/%m/%y', CAST(date_fin AS STRING)),
+            SAFE.PARSE_DATE('%d/%m/%Y', CAST(date_fin AS STRING))
+        ) AS date_fin_d,
+        note_globale AS note_satisfaction
+    FROM {{ ref('stg_satisfaction_de') }}
+    WHERE prenom IS NOT NULL AND nom IS NOT NULL AND date_fin IS NOT NULL
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY
+            LOWER(TRIM(prenom)), LOWER(TRIM(nom)),
+            COALESCE(
+                SAFE_CAST(date_fin AS DATE),
+                SAFE.PARSE_DATE('%d/%m/%y', CAST(date_fin AS STRING)),
+                SAFE.PARSE_DATE('%d/%m/%Y', CAST(date_fin AS STRING))
+            )
+        ORDER BY Horodateur DESC
+    ) = 1
 ),
 
 -- Intervenants (para_sal_1 = est_formateur_externe)
@@ -183,6 +210,8 @@ conventions AS (
 base AS (
     SELECT
         -- Identifiants parcours
+        i.ID,
+        i.IDAction,
         i.Code_Analytique_Parcours,
         i.Type_Region,
         i.Libelle_Court_Parcours,
@@ -200,12 +229,14 @@ base AS (
         COALESCE(tr.a_passe_examen,  FALSE)                              AS a_passe_examen,
         COALESCE(tr.a_reussi_examen, FALSE)                              AS a_reussi_examen,
 
-        -- Satisfaction
-        sat.note_satisfaction,
+        -- Satisfaction (priorité : email_pro > email_perso > nom+prénom+date_fin)
+        COALESCE(sat.note_satisfaction, sat2.note_satisfaction, sat3.note_satisfaction) AS note_satisfaction,
 
         -- Stagiaire
         i.stg_stagiaire_id,
         i.id_societe,
+        i.stg_nom,
+        i.stg_prenom,
         i.stg_email_pro,
         i.stg_email_perso,
 
@@ -311,8 +342,12 @@ base AS (
     LEFT JOIN intervenants         iv  ON CAST(iv.intervenant_id AS STRING) = CAST(i.fr_formateur_id AS STRING)
                                       AND iv.id_societe      = i.id_societe
     LEFT JOIN tiers                tr  ON tr.id_tiers = CAST(i.stg_stagiaire_id AS STRING)
-    LEFT JOIN satisfaction         sat ON sat.mail = LOWER(TRIM(i.stg_email_pro))
-                                      OR sat.mail = LOWER(TRIM(i.stg_email_perso))
+    LEFT JOIN satisfaction         sat  ON sat.mail  = LOWER(TRIM(i.stg_email_pro))
+    LEFT JOIN satisfaction         sat2 ON sat2.mail = LOWER(TRIM(i.stg_email_perso))
+                                       AND LOWER(TRIM(i.stg_email_perso)) != LOWER(TRIM(i.stg_email_pro))
+    LEFT JOIN satisfaction_by_name sat3 ON sat3.prenom     = LOWER(TRIM(i.stg_prenom))
+                                       AND sat3.nom        = LOWER(TRIM(i.stg_nom))
+                                       AND sat3.date_fin_d = SAFE_CAST(LEFT(i.Date_Sortie_Previsionnelle, 10) AS DATE)
 )
 
 SELECT

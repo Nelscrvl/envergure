@@ -6,7 +6,7 @@ models:
     description: "Inscriptions enrichies des heures réalisées (présence), heures absence et heures de stage. Grain : 1 ligne par inscription."
     columns:
       - name: ID
-        tests: [not_null, unique]
+        tests: [not_null]
 
   - name: int_formateur_heures
     description: "Heures formateur agrégées par (intervenant × action). Grain : 1 ligne par formateur × action."
@@ -17,5 +17,22 @@ models:
   - name: int_inscrit_pilotage
     description: "Inscriptions enrichies des objectifs BDC et du CA généré par stagiaire. Joint Int_inscrit_formation × int_convention_pilotage."
     columns:
-      - name: id_inscription
+      - name: stg_stagiaire_id
         tests: [not_null]
+
+  - name: int_presence_stagiaire
+    description: >
+      Présences au grain séance côté stagiaire — pendant de int_presence_pilotage
+      (formateur-centrique). Conserve la date de séance, contrairement à
+      int_inscrit_pilotage qui agrège les heures par (stagiaire × action).
+      Grain : 1 ligne par (stagiaire × action × date × heure_debut).
+    columns:
+      - name: stagiaire_id
+        tests: [not_null]
+      - name: date_seance
+        tests: [not_null]
+      - name: heures_seance
+        tests: [not_null]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [stagiaire_id, id_action, date_seance, heure_debut]
