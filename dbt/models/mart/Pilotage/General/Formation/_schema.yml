@@ -15,7 +15,14 @@ models:
         tests: [not_null]
 
   - name: mrt_presence_stagiaire
-    description: "Table mart — présences datées par stagiaire (grain séance). Expose int_presence_stagiaire."
+    description: >
+      Table mart — présences datées par stagiaire (grain séance).
+      Expose int_presence_stagiaire.
+      Piège d'agrégation : une séance est portée par autant de lignes qu'elle a de
+      stagiaires. Pour les heures formateur, utiliser SUM(heures_formateur) et jamais
+      SUM(heures_seance), qui multiplierait par l'effectif.
+      ca_heure_realisee n'est renseigné que pour le tarif « Heure par stagiaire »
+      (89 % des lignes) ; les forfaits ne sont pas ventilables à la séance.
     columns:
       - name: stagiaire_id
         tests: [not_null]
