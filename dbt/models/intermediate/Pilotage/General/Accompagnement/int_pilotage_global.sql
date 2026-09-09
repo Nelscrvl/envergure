@@ -229,9 +229,17 @@ an.*,
 CASE WHEN note_globale >=0 AND note_globale <= 5 THEN 1
 ELSE 0
 END AS nb_de_note,
-CASE WHEN rnk_lc =1 AND statut = "Annulé" THEN 1
+-- Sessions reellement annulees. Le AND/OR sans parentheses faisait sauter le
+-- filtre rnk_lc sur les branches OR (precedence SQL) : +17 320 lignes comptees.
+CASE WHEN rnk_lc = 1 AND statut = "Annulé" THEN 1
 ELSE 0
 END AS dont_sessions_annulee,
+-- Sessions effectivement demarrees, hors convoques et annules.
+CASE WHEN rnk_lc = 1
+      AND statut IN ("Prestation aboutie", "Sortie anticipée", "Prestation en cours") THEN 1
+ELSE 0
+END AS dont_nb_sessions_demarrees,
+
 p.total_nb_heure,
 p.nb_pmsmp
 FROM ajout_note as an
