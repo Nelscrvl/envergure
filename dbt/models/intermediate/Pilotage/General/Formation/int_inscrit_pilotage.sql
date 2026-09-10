@@ -105,7 +105,56 @@ select
        1, 0)                                                                as a_genere_assez_ca,
     IF(i.heures_realisees > 0, 1, 0)                                       as a_demarre_formation,
     IF(i.conv_id IS NOT NULL, 1, 0)                                        as est_conventionne,
-    IF(SAFE_CAST(i.Date_Sortie AS DATE) >= CURRENT_DATE(), 1, 0)           as est_en_cours
+    -- Attention : "en cours a la date du jour". Pour savoir qui etait en cours sur
+    -- un mois passe, utiliser mrt_inscrit_pilotage_stock et sa colonne mois_actif.
+    IF(SAFE_CAST(i.Date_Sortie AS DATE) >= CURRENT_DATE(), 1, 0)           as est_en_cours,
+
+    -- ---------------------------------------------------------------------
+    -- Colonnes de groupe, sommables sans effet d'eventail
+    --
+    -- nb_inscrits, nb_stagiaire_prevu, nb_jours_ouvres et montant_total_bdc sont
+    -- des attributs du groupe ou de la convention, repetes sur chaque inscription.
+    -- Les sommer les multiplie par l'effectif (SUM(nb_inscrits) = 101 au lieu de 11
+    -- sur PASI G71). Les colonnes ci-dessous ne portent la valeur que sur une seule
+    -- ligne du groupe : c'est SUM() de celles-la qu'il faut utiliser cote Looker.
+    -- ---------------------------------------------------------------------
+    IF(ROW_NUMBER() OVER (PARTITION BY i.IDAction ORDER BY i.stg_stagiaire_id) = 1,
+       COUNT(*) OVER (PARTITION BY i.IDAction), NULL)                      as nb_stagiaires_groupe,
+
+    IF(ROW_NUMBER() OVER (PARTITION BY i.IDAction ORDER BY i.stg_stagiaire_id) = 1,
+       i.nb_jours_ouvres, NULL)                                            as nb_jours_formation_groupe,
+
+    IF(ROW_NUMBER() OVER (PARTITION BY i.conv_id, i.conv_id_societe
+                          ORDER BY i.stg_stagiaire_id) = 1,
+       i.nb_stagiaire_prevu, NULL)                                         as nb_stagiaire_prevu_groupe,
+
+    -- Paire dediee au taux de saturation.
+    -- nb_stagiaires_groupe est porte par action, nb_stagiaire_prevu_groupe par
+    -- convention : les diviser l'un par l'autre compare deux mailles differentes.
+    -- Pire, seules 335 conventions sur 521 portent un effectif prevu, donc le
+    -- numerateur inclut des groupes absents du denominateur et le ratio depasse 100 %.
+    -- Ces deux colonnes sont sur la meme maille (convention) et ne sont renseignees
+    -- que lorsque l'effectif prevu existe, pour que SUM()/SUM() soit comparable.
+    IF(ROW_NUMBER() OVER (PARTITION BY i.conv_id, i.conv_id_societe
+                          ORDER BY i.stg_stagiaire_id) = 1
+       AND i.nb_stagiaire_prevu IS NOT NULL,
+       COUNT(*) OVER (PARTITION BY i.conv_id, i.conv_id_societe), NULL)    as saturation_inscrits,
+
+    IF(ROW_NUMBER() OVER (PARTITION BY i.conv_id, i.conv_id_societe
+                          ORDER BY i.stg_stagiaire_id) = 1
+       AND i.nb_stagiaire_prevu IS NOT NULL,
+       i.nb_stagiaire_prevu, NULL)                                         as saturation_prevus,
+
+    -- CA potentiel par inscrit. Le BDC ne porte de montant que sur une partie des
+    -- tarifs ; pour "Forfait stagiaire" le prix vit dans tt_prix, d'ou le repli.
+    COALESCE(
+        CASE
+            WHEN i.nom_type_tarif = 'Forfait groupe (ou forfait formateur)'
+            THEN SAFE_DIVIDE(i.montant_total_bdc, i.nb_inscrits_groupe)
+            ELSE SAFE_DIVIDE(i.montant_total_bdc, i.nb_inscrits)
+        END,
+        IF(i.nom_type_tarif = 'Forfait stagiaire', i.tt_prix, NULL)
+    )                                                                      as ca_potentiel
 
 from inscrits i
 --WHERE  LIKE "Les Compa%"

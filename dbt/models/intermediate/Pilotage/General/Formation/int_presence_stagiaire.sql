@@ -57,15 +57,22 @@ realisees AS (
     SELECT * FROM seances WHERE date_seance <= CURRENT_DATE()
 ),
 
--- Tarif au grain (stagiaire x action), depuis l'inscription.
-tarif_inscrit AS (
+-- Tarif principal par convention. Meme regle de selection que Int_inscrit_formation
+-- (est_principal d'abord, sinon le premier tarif).
+tarifs AS (
     SELECT
-        stg_stagiaire_id                    AS stagiaire_id,
-        CAST(IDAction AS STRING)            AS id_action,
-        ANY_VALUE(nom_type_tarif)           AS nom_type_tarif,
-        ANY_VALUE(prix_stagiaire_centre)    AS prix_stagiaire_centre
-    FROM {{ ref('Int_inscrit_formation') }}
-    GROUP BY 1, 2
+        id_convention,
+        id_societe,
+        nom_type_tarif,
+        SAFE_CAST(tt_prix                  AS NUMERIC) AS tt_prix,
+        SAFE_CAST(tt_prix_stagiaire_centre AS NUMERIC) AS prix_stagiaire_centre,
+        SAFE_CAST(tt_duree_prevue_heures   AS NUMERIC) AS duree_prevue_heures
+    FROM {{ ref('stg_tarif_convention') }}
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY id_convention, id_societe
+        ORDER BY CASE WHEN UPPER(est_principal) = 'TRUE' THEN 0 ELSE 1 END,
+                 id_tarif_convention
+    ) = 1
 )
 
 SELECT
@@ -117,9 +124,34 @@ SELECT
     t.prix_stagiaire_centre,
     IF(t.nom_type_tarif = 'Heure par stagiaire',
        r.heures_seance * t.prix_stagiaire_centre,
-       NULL)                                        AS ca_heure_realisee
+       NULL)                                        AS ca_heure_realisee,
+
+    -- Heures conventionnees et CA forfaitaire : definis au niveau de l'inscription,
+    -- pas de la seance. Portes par une seule ligne par (stagiaire x action), sinon
+    -- SUM() les multiplierait par le nombre de seances. Renseignes uniquement pour
+    -- le tarif "Forfait stagiaire", seul type ou la source les fournit.
+    IF(ROW_NUMBER() OVER (
+           PARTITION BY r.stagiaire_id, r.id_action
+           ORDER BY r.date_seance, r.heure_debut
+       ) = 1, t.duree_prevue_heures, NULL)          AS heures_conventionnees,
+
+    IF(ROW_NUMBER() OVER (
+           PARTITION BY r.stagiaire_id, r.id_action
+           ORDER BY r.date_seance, r.heure_debut
+       ) = 1, t.tt_prix, NULL)                      AS ca_forfait_stagiaire,
+
+    -- Colonne unique a sommer cote CA : les deux sources sont exclusives par
+    -- type de tarif, donc pas de double comptage.
+    COALESCE(
+        IF(t.nom_type_tarif = 'Heure par stagiaire',
+           r.heures_seance * t.prix_stagiaire_centre, NULL),
+        IF(ROW_NUMBER() OVER (
+               PARTITION BY r.stagiaire_id, r.id_action
+               ORDER BY r.date_seance, r.heure_debut
+           ) = 1, t.tt_prix, NULL)
+    )                                               AS ca_realise
 
 FROM realisees r
-LEFT JOIN tarif_inscrit t
-       ON  t.stagiaire_id = r.stagiaire_id
-       AND t.id_action    = r.id_action
+LEFT JOIN tarifs t
+       ON  t.id_convention = CAST(r.convention_id         AS STRING)
+       AND t.id_societe    = CAST(r.convention_id_societe AS STRING)
