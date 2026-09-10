@@ -137,15 +137,14 @@ SELECT
        r.heures_seance * t.prix_stagiaire_centre,
        NULL)                                        AS ca_heure_realisee,
 
-    -- Heures conventionnees et CA forfaitaire : definis au niveau de l'inscription,
-    -- pas de la seance. Portes par une seule ligne par (stagiaire x action), sinon
-    -- SUM() les multiplierait par le nombre de seances. Renseignes uniquement pour
-    -- le tarif "Forfait stagiaire", seul type ou la source les fournit.
-    IF(ROW_NUMBER() OVER (
-           PARTITION BY r.stagiaire_id, r.id_action
-           ORDER BY r.date_seance, r.heure_debut
-       ) = 1, t.duree_prevue_heures, NULL)          AS heures_conventionnees,
-
+    -- CA forfaitaire : defini au niveau de l'inscription, pas de la seance. Porte
+    -- par une seule ligne par (stagiaire x action), sinon SUM() le multiplierait
+    -- par le nombre de seances. Renseigne uniquement pour le "Forfait stagiaire".
+    --
+    -- Pas de heures_conventionnees ici : le metier les definit comme
+    -- places prevues x duree, soit un attribut de convention. La colonne vit dans
+    -- mrt_inscrit_pilotage sous le nom heures_conventionnees_groupe. La calculer
+    -- ici sur les inscrits donnerait 126 h la ou la convention en prevoit 168.
     IF(ROW_NUMBER() OVER (
            PARTITION BY r.stagiaire_id, r.id_action
            ORDER BY r.date_seance, r.heure_debut
