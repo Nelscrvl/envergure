@@ -54,10 +54,10 @@ select
     i.montant_total_bdc,
     i.montant_centre_bdc,
     i.montant_entrep_bdc,
-    -- Le decoupage centre/entreprise n'existe que sur "Heure par stagiaire" ;
-    -- sur les forfaits la duree prevue vit dans duree_prevue_heures_bdc, d'ou le repli
-    -- (sans lui, heures_centre_prevues et heures_totales_prevues tombaient a 0).
-    COALESCE(i.duree_stagiaire_centre_bdc, i.duree_prevue_heures_bdc)      as heures_centre_prevues,
+    -- Pas de repli sur duree_prevue_heures_bdc ici : il rendait cette colonne
+    -- rigoureusement egale a heures_realisees (inscrits x duree contractuelle).
+    -- Le prevu au niveau groupe est heures_conventionnees_groupe (places x duree).
+    i.duree_stagiaire_centre_bdc                                            as heures_centre_prevues,
     i.duree_stagiaire_entrep_bdc                                            as heures_entrep_prevues,
     COALESCE(
         NULLIF(COALESCE(i.duree_stagiaire_centre_bdc, 0)
@@ -75,8 +75,11 @@ select
 
     -- Heures / jours réalisés
     i.nb_jours_ouvres,
+    -- heures_realisees somme les durees de seance sans deduire l'absence : c'est
+    -- du programme. heures_effectives est le temps reellement suivi.
     i.heures_realisees,
     i.heures_absence,
+    i.heures_realisees - i.heures_absence                                   as heures_effectives,
     i.heures_stage,
     i.heures_formateur,
     i.heures_realisees + i.heures_stage                                     as heures_totales,
