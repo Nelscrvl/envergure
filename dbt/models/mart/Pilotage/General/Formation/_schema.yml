@@ -9,10 +9,37 @@ models:
     description: "Table mart — heures formateur par action. Expose int_formateur_heures."
 
   - name: mrt_inscrit_pilotage
-    description: "Table mart — pilotage par stagiaire : heures prévues vs réalisées, taux de réalisation, CA généré."
+    description: >
+      Table mart — pilotage par stagiaire : heures prévues vs réalisées, taux de
+      réalisation, CA généré. Grain : 1 ligne par inscription.
+      Aucune dimension temporelle : toutes les colonnes d'heures sont des CUMULS
+      SUR L'ENSEMBLE DU PARCOURS, jamais des montants mensuels. Filtrer sur un mois
+      ne découpe donc pas les heures, il sélectionne seulement les inscriptions dont
+      la date de démarrage tombe dans ce mois, avec leur total parcours complet.
+      Pour des heures par mois, utiliser mrt_presence_stagiaire et sa colonne mois_seance.
     columns:
       - name: stg_stagiaire_id
         tests: [not_null]
+      - name: heures_realisees
+        description: "Heures réalisées en centre, cumulées sur tout le parcours. Inclut les heures d'absence."
+      - name: heures_absence
+        description: "Heures d'absence cumulées sur tout le parcours. Vaut 0 tant que l'absence n'est pas saisie dans Sofia."
+      - name: heures_stage
+        description: "Heures de stage en entreprise, cumulées sur tout le parcours."
+      - name: heures_totales
+        description: "heures_realisees + heures_stage, cumulées sur tout le parcours."
+      - name: heures_formateur
+        description: "Heures formateur au prorata du nombre d'inscrits, cumulées sur tout le parcours."
+      - name: nb_inscrits
+        description: >
+          PIÈGE : compte au niveau convention, recopié sur chaque inscription.
+          Le sommer multiplie par l'effectif. Utiliser nb_stagiaires_groupe.
+      - name: nb_jours_ouvres
+        description: "PIÈGE : attribut de groupe recopié sur chaque ligne. Utiliser nb_jours_formation_groupe."
+      - name: est_en_cours
+        description: >
+          « En cours à la date du jour », donc toujours 0 sur un mois passé.
+          Pour un mois donné, utiliser mrt_inscrit_pilotage_stock et mois_actif.
 
   - name: mrt_presence_stagiaire
     description: >
