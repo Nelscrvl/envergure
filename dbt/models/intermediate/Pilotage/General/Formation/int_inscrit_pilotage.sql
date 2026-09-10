@@ -54,10 +54,16 @@ select
     i.montant_total_bdc,
     i.montant_centre_bdc,
     i.montant_entrep_bdc,
-    i.duree_stagiaire_centre_bdc                                            as heures_centre_prevues,
+    -- Le decoupage centre/entreprise n'existe que sur "Heure par stagiaire" ;
+    -- sur les forfaits la duree prevue vit dans duree_prevue_heures_bdc, d'ou le repli
+    -- (sans lui, heures_centre_prevues et heures_totales_prevues tombaient a 0).
+    COALESCE(i.duree_stagiaire_centre_bdc, i.duree_prevue_heures_bdc)      as heures_centre_prevues,
     i.duree_stagiaire_entrep_bdc                                            as heures_entrep_prevues,
-    COALESCE(i.duree_stagiaire_centre_bdc, 0)
-        + COALESCE(i.duree_stagiaire_entrep_bdc, 0)                        as heures_totales_prevues,
+    COALESCE(
+        NULLIF(COALESCE(i.duree_stagiaire_centre_bdc, 0)
+             + COALESCE(i.duree_stagiaire_entrep_bdc, 0), 0),
+        i.duree_prevue_heures_bdc
+    )                                                                       as heures_totales_prevues,
     i.duree_prevue_heures_bdc,
     i.nb_stagiaire_prevu,
     SAFE_DIVIDE(CAST(i.nb_stagiaire_prevu AS NUMERIC), i.nb_inscrits) AS nb_stagiaire_prevu_prorata,
@@ -127,6 +133,12 @@ select
     IF(ROW_NUMBER() OVER (PARTITION BY i.conv_id, i.conv_id_societe
                           ORDER BY i.stg_stagiaire_id) = 1,
        i.nb_stagiaire_prevu, NULL)                                         as nb_stagiaire_prevu_groupe,
+
+    -- Heures conventionnees du groupe : places prevues x duree par stagiaire.
+    -- Attribut de convention, donc porte par une seule ligne pour rester sommable.
+    IF(ROW_NUMBER() OVER (PARTITION BY i.conv_id, i.conv_id_societe
+                          ORDER BY i.stg_stagiaire_id) = 1,
+       i.heures_conventionnees_bdc, NULL)                                  as heures_conventionnees_groupe,
 
     -- Paire dediee au taux de saturation.
     -- nb_stagiaires_groupe est porte par action, nb_stagiaire_prevu_groupe par

@@ -57,6 +57,16 @@ realisees AS (
     SELECT * FROM seances WHERE date_seance <= CURRENT_DATE()
 ),
 
+-- Interne / externe : champ para_sal_1 de la fiche Intervenant.
+intervenants AS (
+    SELECT CAST(intervenant_id AS STRING) AS intervenant_id, '2' AS id_societe, est_formateur_externe
+    FROM {{ ref('stg_intervenant_Soc_2') }}
+    UNION ALL
+    SELECT CAST(intervenant_id AS STRING), '3', est_formateur_externe FROM {{ ref('stg_intervenant_Soc_3') }}
+    UNION ALL
+    SELECT CAST(intervenant_id AS STRING), '4', est_formateur_externe FROM {{ ref('stg_intervenant_Soc_4') }}
+),
+
 -- Tarif principal par convention. Meme regle de selection que Int_inscrit_formation
 -- (est_principal d'abord, sinon le premier tarif).
 tarifs AS (
@@ -101,6 +111,7 @@ SELECT
     r.type_absence_libelle,
     r.intervenant_id,
     r.formateur_nom_complet,
+    COALESCE(iv.est_formateur_externe, FALSE)       AS est_formateur_externe,
 
     -- Heures stagiaire : heures_seance inclut l'absence, cohérent avec Int_inscrit_formation
     r.heures_seance,
@@ -152,6 +163,9 @@ SELECT
     )                                               AS ca_realise
 
 FROM realisees r
+LEFT JOIN intervenants iv
+       ON  iv.intervenant_id = r.intervenant_id
+       AND iv.id_societe     = r.id_societe
 LEFT JOIN tarifs t
        ON  t.id_convention = CAST(r.convention_id         AS STRING)
        AND t.id_societe    = CAST(r.convention_id_societe AS STRING)

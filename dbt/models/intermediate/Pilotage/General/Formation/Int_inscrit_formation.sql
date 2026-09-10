@@ -265,6 +265,7 @@ base AS (
         bdc.duree_stagiaire_centre_bdc,
         bdc.duree_stagiaire_entrep_bdc,
         bdc.duree_prevue_heures_bdc,
+        bdc.heures_conventionnees_bdc,
         bdc.nb_stagiaire_prevu,
         nic.nb_inscrits,
 

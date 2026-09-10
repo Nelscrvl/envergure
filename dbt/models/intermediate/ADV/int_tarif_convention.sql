@@ -55,6 +55,16 @@ select
     SUM(tt_duree_stagiaire_centre)          as duree_stagiaire_centre_bdc,
     SUM(tt_duree_stagiaire_entreprise)      as duree_stagiaire_entrep_bdc,
     SUM(COALESCE(tt_nombre_stagiaire_prevu, tt_quantite)) as nb_stagiaire_prevu,
+    -- Heures conventionnees = places prevues x duree par stagiaire.
+    -- La duree vit dans tt_duree_prevue_heures pour les forfaits et dans le couple
+    -- centre/entreprise pour "Heure par stagiaire" : les deux ne coexistent jamais.
+    SUM(
+        COALESCE(tt_nombre_stagiaire_prevu, tt_quantite)
+        * COALESCE(
+            tt_duree_prevue_heures,
+            COALESCE(tt_duree_stagiaire_centre, 0) + COALESCE(tt_duree_stagiaire_entreprise, 0)
+          )
+    )                                       as heures_conventionnees_bdc,
     MAX(tt_prix_stagiaire_centre)           as prix_stagiaire_centre,
     MAX(tt_prix_stagiaire_entreprise)       as prix_stagiaire_entrep
 from with_montant
