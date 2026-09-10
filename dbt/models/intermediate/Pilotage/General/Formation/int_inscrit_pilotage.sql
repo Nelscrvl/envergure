@@ -147,14 +147,15 @@ select
 
     -- CA potentiel par inscrit. Le BDC ne porte de montant que sur une partie des
     -- tarifs ; pour "Forfait stagiaire" le prix vit dans tt_prix, d'ou le repli.
-    COALESCE(
-        CASE
-            WHEN i.nom_type_tarif = 'Forfait groupe (ou forfait formateur)'
-            THEN SAFE_DIVIDE(i.montant_total_bdc, i.nb_inscrits_groupe)
-            ELSE SAFE_DIVIDE(i.montant_total_bdc, i.nb_inscrits)
-        END,
-        IF(i.nom_type_tarif = 'Forfait stagiaire', i.tt_prix, NULL)
-    )                                                                      as ca_potentiel
+    CASE
+        -- Le forfait stagiaire est un prix par personne : le diviser par l'effectif
+        -- reel le sous-estimerait des que le groupe depasse la capacite prevue.
+        WHEN i.nom_type_tarif = 'Forfait stagiaire'
+        THEN i.tt_prix
+        WHEN i.nom_type_tarif = 'Forfait groupe (ou forfait formateur)'
+        THEN SAFE_DIVIDE(i.montant_total_bdc, i.nb_inscrits_groupe)
+        ELSE SAFE_DIVIDE(i.montant_total_bdc, i.nb_inscrits)
+    END                                                                    as ca_potentiel
 
 from inscrits i
 --WHERE  LIKE "Les Compa%"
