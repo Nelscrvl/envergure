@@ -57,6 +57,14 @@ realisees AS (
     SELECT * FROM seances WHERE date_seance <= CURRENT_DATE()
 ),
 
+-- Heures conventionnees du groupe : places prevues x duree par stagiaire, soit
+-- le volume si le groupe etait rempli a 100 %. Reprise telle quelle de
+-- int_tarif_convention pour rester identique a mrt_inscrit_pilotage.
+conventionne AS (
+    SELECT id_convention, id_societe, heures_conventionnees_bdc
+    FROM {{ ref('int_tarif_convention') }}
+),
+
 -- Interne / externe : champ para_sal_1 de la fiche Intervenant.
 intervenants AS (
     SELECT CAST(intervenant_id AS STRING) AS intervenant_id, '2' AS id_societe, est_formateur_externe
@@ -133,6 +141,12 @@ SELECT
     -- à la séance, donc NULL plutôt qu'une répartition arbitraire.
     t.nom_type_tarif,
     t.prix_stagiaire_centre,
+
+    -- Attribut de convention : porte par une seule ligne pour rester sommable.
+    IF(ROW_NUMBER() OVER (
+           PARTITION BY r.convention_id, r.convention_id_societe
+           ORDER BY r.date_seance, r.stagiaire_id, r.heure_debut
+       ) = 1, c.heures_conventionnees_bdc, NULL)    AS heures_conventionnees_groupe,
     IF(t.nom_type_tarif = 'Heure par stagiaire',
        r.heures_seance * t.prix_stagiaire_centre,
        NULL)                                        AS ca_heure_realisee,
@@ -168,3 +182,6 @@ LEFT JOIN intervenants iv
 LEFT JOIN tarifs t
        ON  t.id_convention = CAST(r.convention_id         AS STRING)
        AND t.id_societe    = CAST(r.convention_id_societe AS STRING)
+LEFT JOIN conventionne c
+       ON  c.id_convention = CAST(r.convention_id         AS STRING)
+       AND c.id_societe    = CAST(r.convention_id_societe AS STRING)
