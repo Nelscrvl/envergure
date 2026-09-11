@@ -188,6 +188,17 @@ intervenants AS (
     SELECT intervenant_id, '4' AS id_societe, est_formateur_externe FROM {{ ref('stg_intervenant_Soc_4') }}
 ),
 
+-- Specialite NSF de l'action (nomenclature BPF), renseignee sur les 784 actions.
+specialites AS (
+    SELECT
+        Code_Analytique                      AS code_analytique,
+        specialite_reference                 AS specialite_code,
+        specialite_libelle                   AS specialite_libelle
+    FROM {{ ref('stg_entites') }}
+    WHERE Code_Analytique IS NOT NULL
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY Code_Analytique ORDER BY ID) = 1
+),
+
 -- Dimensions convention (groupe_ou_individuelle, dates) depuis les tables convention
 conventions AS (
     SELECT
@@ -213,6 +224,8 @@ base AS (
         i.ID,
         i.IDAction,
         i.Code_Analytique_Parcours,
+        sp.specialite_code,
+        sp.specialite_libelle,
         i.Type_Region,
         i.Libelle_Court_Parcours,
         i.IDParcours_Groupe,
@@ -342,6 +355,7 @@ base AS (
                                       AND nic.conv_id_societe = CAST(i.conv_id_societe AS STRING)
     LEFT JOIN intervenants         iv  ON CAST(iv.intervenant_id AS STRING) = CAST(i.fr_formateur_id AS STRING)
                                       AND iv.id_societe      = i.id_societe
+    LEFT JOIN specialites          sp  ON sp.code_analytique = i.Code_Analytique_Parcours
     LEFT JOIN tiers                tr  ON tr.id_tiers = CAST(i.stg_stagiaire_id AS STRING)
     LEFT JOIN satisfaction         sat  ON sat.mail  = LOWER(TRIM(i.stg_email_pro))
     LEFT JOIN satisfaction         sat2 ON sat2.mail = LOWER(TRIM(i.stg_email_perso))

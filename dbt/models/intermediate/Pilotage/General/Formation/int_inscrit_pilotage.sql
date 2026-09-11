@@ -6,6 +6,8 @@ select
     -- Identifiants
     i.stg_stagiaire_id,
     i.Code_Analytique_Parcours                                              as code_analytique_parcours,
+    i.specialite_code,
+    i.specialite_libelle,
     i.Libelle_Court_Parcours                                                as libelle_parcours,
     i.IDParcours_Groupe                                                     as id_parcours_groupe,
     i.Type_Region                                                           as type_region,
