@@ -17,8 +17,12 @@ WITH inscrits AS (
         heures_totales_prevues,
         ca_genere,
         montant_total_bdc,
+        date_abandon,
         SAFE_CAST(LEFT(date_entree,                10) AS DATE) AS date_entree_d,
-        SAFE_CAST(LEFT(date_sortie_previsionnelle, 10) AS DATE) AS date_fin_d
+        -- Un stagiaire parti avant terme n'est plus en cours apres son depart :
+        -- le stock s'arrete a la date d'abandon, sinon a la sortie prevue.
+        COALESCE(date_abandon,
+                 SAFE_CAST(LEFT(date_sortie_previsionnelle, 10) AS DATE)) AS date_fin_d
     FROM {{ ref('int_inscrit_pilotage') }}
     WHERE date_entree IS NOT NULL
       AND date_sortie_previsionnelle IS NOT NULL
@@ -53,6 +57,9 @@ SELECT
     EXTRACT(MONTH FROM mois_actif) AS mois,
     -- Colonnes numériques pour SUM() direct dans Looker Studio
     1                              AS nb_en_cours,
+    -- Abandon survenu CE mois-ci, parmi les parcours en cours ce mois-la.
+    -- Taux d'abandon du mois = SUM(nb_abandons) / SUM(nb_en_cours).
+    IF(DATE_TRUNC(i.date_abandon, MONTH) = mois_actif, 1, 0) AS nb_abandons,
     i.est_conventionne             AS nb_conventionnes
 FROM inscrits i,
 UNNEST(GENERATE_DATE_ARRAY(

@@ -105,9 +105,18 @@ select
     ) * 100                                                                 as taux_realisation_total,
 
     -- Flags (0/1)
-    IF(SAFE_CAST(i.Date_Sortie AS DATE) < i.date_fin_convention
-       AND SAFE_CAST(i.Date_Sortie AS DATE) < CURRENT_DATE(),
+    -- Abandon = sortie avant la date de sortie PREVUE du stagiaire.
+    -- L'ancienne regle comparait a la fin de CONVENTION : sur les conventions
+    -- multi-groupes (FT IDF, CR CVDL...) la convention court des mois apres la fin
+    -- normale d'un groupe, et tous ses stagiaires etaient comptes en abandon
+    -- (2 163 abandons sur 5 015 inscriptions, contre 287 sorties reellement anticipees).
+    IF(DATE(i.Date_Sortie) < SAFE_CAST(LEFT(i.Date_Sortie_Previsionnelle, 10) AS DATE)
+       AND DATE(i.Date_Sortie) <= CURRENT_DATE(),
        1, 0)                                                                as abandon_parcours,
+    -- Date a laquelle l'abandon survient, pour l'attribuer au bon mois d'activite.
+    IF(DATE(i.Date_Sortie) < SAFE_CAST(LEFT(i.Date_Sortie_Previsionnelle, 10) AS DATE)
+       AND DATE(i.Date_Sortie) <= CURRENT_DATE(),
+       DATE(i.Date_Sortie), NULL)                                          as date_abandon,
     IF(i.heures_realisees >= COALESCE(i.duree_stagiaire_centre_bdc, 0),
        1, 0)                                                                as a_realise_heures_centre,
     IF(i.heures_stage >= COALESCE(i.duree_stagiaire_entrep_bdc, 0),
@@ -121,46 +130,39 @@ select
     IF(SAFE_CAST(i.Date_Sortie AS DATE) >= CURRENT_DATE(), 1, 0)           as est_en_cours,
 
     -- ---------------------------------------------------------------------
-    -- Colonnes de groupe, sommables sans effet d'eventail
+    -- Colonnes de groupe, sommables sous n'importe quel filtre
     --
-    -- nb_inscrits, nb_stagiaire_prevu, nb_jours_ouvres et montant_total_bdc sont
-    -- des attributs du groupe ou de la convention, repetes sur chaque inscription.
-    -- Les sommer les multiplie par l'effectif (SUM(nb_inscrits) = 101 au lieu de 11
-    -- sur PASI G71). Les colonnes ci-dessous ne portent la valeur que sur une seule
-    -- ligne du groupe : c'est SUM() de celles-la qu'il faut utiliser cote Looker.
+    -- Les attributs de convention ou d'action (effectif prevu, heures
+    -- conventionnees, jours de formation) sont repartis au PRORATA des inscriptions
+    -- du groupe : chaque ligne en porte sa part. La somme sur le groupe est exacte,
+    -- et un filtre mensuel ou regional en recupere la part correspondante.
+    --
+    -- La version precedente portait la valeur entiere sur UNE seule ligne : sous un
+    -- filtre mensuel, une convention dont les entrees s'etalent sur plusieurs mois
+    -- (57 conventions, 1 540 inscriptions) se retrouvait entierement dans un mois et
+    -- absente des autres, d'ou des ecarts prevus/inscrits incomprehensibles.
     -- ---------------------------------------------------------------------
-    IF(ROW_NUMBER() OVER (PARTITION BY i.IDAction ORDER BY i.stg_stagiaire_id) = 1,
-       COUNT(*) OVER (PARTITION BY i.IDAction), NULL)                      as nb_stagiaires_groupe,
+    1                                                                       as nb_stagiaires_groupe,
 
-    IF(ROW_NUMBER() OVER (PARTITION BY i.IDAction ORDER BY i.stg_stagiaire_id) = 1,
-       i.nb_jours_ouvres, NULL)                                            as nb_jours_formation_groupe,
+    SAFE_DIVIDE(i.nb_jours_ouvres,
+                COUNT(*) OVER (PARTITION BY i.IDAction))                    as nb_jours_formation_groupe,
 
-    IF(ROW_NUMBER() OVER (PARTITION BY i.conv_id, i.conv_id_societe
-                          ORDER BY i.stg_stagiaire_id) = 1,
-       i.nb_stagiaire_prevu, NULL)                                         as nb_stagiaire_prevu_groupe,
+    SAFE_DIVIDE(i.nb_stagiaire_prevu,
+                COUNT(*) OVER (PARTITION BY i.conv_id, i.conv_id_societe))  as nb_stagiaire_prevu_groupe,
 
-    -- Heures conventionnees du groupe : places prevues x duree par stagiaire.
-    -- Attribut de convention, donc porte par une seule ligne pour rester sommable.
-    IF(ROW_NUMBER() OVER (PARTITION BY i.conv_id, i.conv_id_societe
-                          ORDER BY i.stg_stagiaire_id) = 1,
-       i.heures_conventionnees_bdc, NULL)                                  as heures_conventionnees_groupe,
+    -- Heures conventionnees : places prevues x duree par stagiaire, au prorata.
+    SAFE_DIVIDE(i.heures_conventionnees_bdc,
+                COUNT(*) OVER (PARTITION BY i.conv_id, i.conv_id_societe))  as heures_conventionnees_groupe,
 
-    -- Paire dediee au taux de saturation.
-    -- nb_stagiaires_groupe est porte par action, nb_stagiaire_prevu_groupe par
-    -- convention : les diviser l'un par l'autre compare deux mailles differentes.
-    -- Pire, seules 335 conventions sur 521 portent un effectif prevu, donc le
-    -- numerateur inclut des groupes absents du denominateur et le ratio depasse 100 %.
-    -- Ces deux colonnes sont sur la meme maille (convention) et ne sont renseignees
-    -- que lorsque l'effectif prevu existe, pour que SUM()/SUM() soit comparable.
-    IF(ROW_NUMBER() OVER (PARTITION BY i.conv_id, i.conv_id_societe
-                          ORDER BY i.stg_stagiaire_id) = 1
-       AND i.nb_stagiaire_prevu IS NOT NULL,
-       COUNT(*) OVER (PARTITION BY i.conv_id, i.conv_id_societe), NULL)    as saturation_inscrits,
+    -- Paire dediee au taux de saturation : restreinte aux conventions dont
+    -- l'effectif prevu est connu, pour que numerateur et denominateur portent sur
+    -- le meme perimetre. Taux = SUM(saturation_inscrits) / SUM(saturation_prevus).
+    IF(i.nb_stagiaire_prevu IS NOT NULL, 1, NULL)                          as saturation_inscrits,
 
-    IF(ROW_NUMBER() OVER (PARTITION BY i.conv_id, i.conv_id_societe
-                          ORDER BY i.stg_stagiaire_id) = 1
-       AND i.nb_stagiaire_prevu IS NOT NULL,
-       i.nb_stagiaire_prevu, NULL)                                         as saturation_prevus,
+    IF(i.nb_stagiaire_prevu IS NOT NULL,
+       SAFE_DIVIDE(i.nb_stagiaire_prevu,
+                   COUNT(*) OVER (PARTITION BY i.conv_id, i.conv_id_societe)),
+       NULL)                                                               as saturation_prevus,
 
     -- CA potentiel par inscrit. Le BDC ne porte de montant que sur une partie des
     -- tarifs ; pour "Forfait stagiaire" le prix vit dans tt_prix, d'ou le repli.
