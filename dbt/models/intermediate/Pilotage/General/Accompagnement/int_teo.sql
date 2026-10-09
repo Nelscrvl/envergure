@@ -64,6 +64,7 @@ WITH base AS (
         CAST(NULL AS INT64)                                                 AS nb_de_note,
         CAST(NULL AS INT64)                                                 AS note_globale,
         0                                                                   AS dont_sessions_annulee,
+        0                                                                   AS dont_nb_sessions_demarrees,
         CAST(NULL AS FLOAT64)                                               AS total_nb_heure,
         CAST(NULL AS INT64)                                                 AS nb_pmsmp
 
