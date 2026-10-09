@@ -65,6 +65,16 @@ conventionne AS (
     FROM {{ ref('int_tarif_convention') }}
 ),
 
+-- Abandons : repris de int_inscrit_pilotage pour garder une seule definition
+-- (sortie avant la date prevue). Dedupliques par stagiaire x action, sinon une
+-- double inscription sur la meme action dupliquerait les seances a la jointure.
+abandons AS (
+    SELECT stg_stagiaire_id, id_action, MIN(date_abandon) AS date_abandon
+    FROM {{ ref('int_inscrit_pilotage') }}
+    WHERE date_abandon IS NOT NULL
+    GROUP BY 1, 2
+),
+
 -- Interne / externe : champ para_sal_1 de la fiche Intervenant.
 intervenants AS (
     SELECT CAST(intervenant_id AS STRING) AS intervenant_id, '2' AS id_societe, est_formateur_externe
@@ -127,6 +137,16 @@ SELECT
     r.heures_seance - r.heures_absence              AS heures_effectives,
     IF(r.heures_absence > 0, 1, 0)                  AS est_absent,
 
+    -- Abandon : porte par la DERNIERE seance du stagiaire sur l'action, donc compte
+    -- dans le mois ou il a cesse de venir. Une seule ligne par abandon : sommable.
+    -- Taux du mois = SUM(nb_abandons) / COUNT_DISTINCT(stagiaire_id).
+    ab.date_abandon,
+    IF(ab.date_abandon IS NOT NULL
+       AND ROW_NUMBER() OVER (
+             PARTITION BY r.stagiaire_id, r.id_action
+             ORDER BY r.date_seance DESC, r.heure_debut DESC
+           ) = 1, 1, 0)                             AS nb_abandons,
+
     -- Heures formateur : une séance est suivie par N stagiaires, donc portée par N
     -- lignes ici. L'heure formateur n'est portée que par une seule d'entre elles,
     -- sinon SUM() multiplierait par l'effectif (106 720 h au lieu de 13 650 h).
@@ -176,6 +196,9 @@ SELECT
     )                                               AS ca_realise
 
 FROM realisees r
+LEFT JOIN abandons ab
+       ON  ab.stg_stagiaire_id = r.stagiaire_id
+       AND ab.id_action        = r.id_action
 LEFT JOIN intervenants iv
        ON  iv.intervenant_id = r.intervenant_id
        AND iv.id_societe     = r.id_societe

@@ -5,6 +5,7 @@ with inscrits as (
 select
     -- Identifiants
     i.stg_stagiaire_id,
+    CAST(i.IDAction AS STRING)                                              as id_action,
     i.Code_Analytique_Parcours                                              as code_analytique_parcours,
     i.specialite_code,
     i.specialite_libelle,
