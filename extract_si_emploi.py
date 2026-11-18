@@ -285,7 +285,7 @@ class MySQLExtractor:
         logger.info("🚀 EXTRACTION MYSQL")
         logger.info("="*60)
         
-        stats = {"success": 0, "failed": 0, "total_records": 0}
+        stats = {"success": 0, "failed": 0, "skipped": 0, "total_records": 0}
         
         try:
             # Setup SSH
@@ -317,6 +317,12 @@ class MySQLExtractor:
                         stats['total_records'] += rows_loaded
                     else:
                         df = self.extract_table(table_name)
+                        if df.empty:
+                            # Table vide côté SI-Emploi (dt_entreprise...) : on garde la version
+                            # BigQuery existante, ce n'est pas une erreur d'extraction.
+                            logger.info(f"∅ '{table_name}' vide côté source, table BigQuery inchangée")
+                            stats['skipped'] += 1
+                            continue
                         success = self.load_to_bigquery(df, table_name)
                         if success:
                             stats['success'] += 1
@@ -327,7 +333,7 @@ class MySQLExtractor:
                     logger.error(f"❌ Erreur avec '{table_name}' : {e}")
                     stats['failed'] += 1
             
-            logger.info(f"\n✅ MySQL terminé - {stats['success']}/{len(tables)} succès")
+            logger.info(f"\n✅ MySQL terminé - {stats['success']}/{len(tables)} succès, {stats['skipped']} vide(s)")
             
         except Exception as e:
             logger.error(f"❌ Erreur dans le pipeline MySQL : {e}", exc_info=True)

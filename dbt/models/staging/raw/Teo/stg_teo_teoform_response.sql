@@ -2,11 +2,17 @@ with source as (
     select * from {{ source('teo', 'teoformResponse') }}
 ),
 
+-- l'extraction Teo ne remonte plus externalId dans teoformResponse :
+-- il est porté par externalLinkFormResponse (même id, relation 1-1)
+external_links as (
+    select id, externalId from {{ source('teo', 'externalLinkFormResponse') }}
+),
+
 renamed as (
     select
         -- Identifiants réponse
-        id,
-        cast(externalId as string)                          as external_id,
+        source.id,
+        cast(external_links.externalId as string)           as external_id,
         cast(createdAt as timestamp)                        as created_at,
         cast(updatedAt as timestamp)                        as updated_at,
 
@@ -30,6 +36,7 @@ renamed as (
         cast(teoformTemplate_elements as string)            as template_elements_json
 
     from source
+    left join external_links on source.id = external_links.id
 )
 
 select * from renamed

@@ -259,8 +259,12 @@ class APIExtractor:
             logger.error(f"❌ Erreur d'authentification : {e}")
             raise
     
-    def fetch_data(self, endpoint: str, params: Optional[Dict] = None, max_retries: int = 3) -> List[Dict]:
-        """Récupère les données d'un endpoint avec gestion de retry"""
+    def fetch_data(self, endpoint: str, params: Optional[Dict] = None, max_retries: int = 3) -> Optional[List[Dict]]:
+        """Récupère les données d'un endpoint avec gestion de retry.
+
+        Renvoie [] si l'API répond sans données (période sans séance, convention sans tarif)
+        et None si l'appel échoue définitivement : seul ce second cas est une erreur.
+        """
         url = f"{self.base_url}{endpoint}"
 
         for attempt in range(max_retries):
@@ -280,8 +284,8 @@ class APIExtractor:
                     time.sleep(2 ** attempt)
                 else:
                     logger.error(f"✗ Échec définitif pour {endpoint}")
-                    return []
-        return []
+                    return None
+        return None
     
     def extract_tarif_conventions(self, bq: 'BigQueryLoader') -> Dict:
         """
@@ -344,6 +348,8 @@ class APIExtractor:
                 batch.extend(data)
                 stats["success"] += 1
                 stats["total_records"] += len(data)
+            elif data is None:
+                stats["failed"] += 1
             else:
                 stats["skipped"] += 1
 
@@ -388,6 +394,7 @@ class APIExtractor:
         stats = {
             "success": 0,
             "failed": 0,
+            "skipped": 0,
             "total_records": 0,
             "duration": 0
         }
@@ -412,11 +419,14 @@ class APIExtractor:
                 logger.info(f"\n--- 📥 Traitement de {endpoint} ---")
                 data = self.fetch_data(endpoint, params=params)
 
-                if data:
+                if data is None:
+                    stats["failed"] += 1
+                elif data:
                     table_batches.setdefault(table, []).extend(data)
                     table_stringify[table] = stringify
                 else:
-                    stats["failed"] += 1
+                    # réponse vide (ex. mois sans séance) : rien à charger, pas une erreur
+                    stats["skipped"] += 1
 
             # Phase 2 — Chargement : un seul WRITE_TRUNCATE par table
             for table, data in table_batches.items():
@@ -439,6 +449,7 @@ class APIExtractor:
             tarif_stats = self.extract_tarif_conventions(bq)
             stats["success"] += tarif_stats["success"]
             stats["failed"] += tarif_stats["failed"]
+            stats["skipped"] += tarif_stats["skipped"]
             stats["total_records"] += tarif_stats["total_records"]
 
             stats["duration"] = round(time.time() - start_time)
@@ -448,6 +459,7 @@ class APIExtractor:
             logger.info(f"⏱️  Durée : {stats['duration']:.2f}s")
             logger.info(f"✅ Succès : {stats['success']}/{len(endpoints_config)}")
             logger.info(f"❌ Échecs : {stats['failed']}")
+            logger.info(f"∅ Réponses vides : {stats['skipped']}")
             logger.info(f"📊 Total : {stats['total_records']} enregistrements")
 
             return stats

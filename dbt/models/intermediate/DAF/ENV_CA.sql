@@ -1,4 +1,6 @@
-{{ config(schema='2_intermediate') }}
+{# Mis de côté le 18/11/2026 : book_2026 n'est plus alimenté ni utilisé. Le modèle et sa table
+   sont conservés (données figées au 24/06/2026) ; retirer enabled=false pour le réactiver. #}
+{{ config(schema='2_intermediate', enabled=false) }}
 
 {# CA Envergure (book_2026) — long format avec code_rubrique.
    Mapping rubriques : C110 (total A+F+P uniquement) + C115 (A) / C116 (F) / C601 (P) / C602 (D).
