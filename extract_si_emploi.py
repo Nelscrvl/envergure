@@ -23,6 +23,15 @@ INCREMENTAL_CONFIG = {
     },
 }
 
+# L'incrémental ne voit ni les corrections d'historique ni les suppressions faites
+# côté Sirom : on recharge entièrement ces tables une fois par semaine (dimanche),
+# ou à la demande avec SIE_FULL_RELOAD=1.
+FULL_RELOAD_WEEKDAY = 6
+
+
+def _full_reload_requested() -> bool:
+    return os.getenv('SIE_FULL_RELOAD') == '1' or datetime.now().weekday() == FULL_RELOAD_WEEKDAY
+
 
 class MySQLExtractor:
     """Extraction des données depuis MySQL via tunnel SSH"""
@@ -147,10 +156,12 @@ class MySQLExtractor:
 
         return f"SELECT *, {watermark_expr} AS _watermark FROM `{table_name}` {where}"
 
-    def extract_and_load_incremental(self, table_name: str, chunk_size: int = 50_000) -> int:
+    def extract_and_load_incremental(self, table_name: str, chunk_size: int = 50_000,
+                                     full_reload: bool = False) -> int:
         """Extraction incrémentale par chunks pour les tables configurées"""
         config = INCREMENTAL_CONFIG[table_name]
-        last_val = self.get_last_watermark(table_name)
+        # Sans watermark, le premier chunk part en WRITE_TRUNCATE : rechargement complet
+        last_val = None if full_reload else self.get_last_watermark(table_name)
         base_query = self._build_incremental_query(table_name, config, last_val)
 
         mode = "incrémental" if last_val else "full load (première fois)"
@@ -209,6 +220,9 @@ class MySQLExtractor:
                 autodetect=True,
                 source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
             )
+            if write_disp == bigquery.WriteDisposition.WRITE_APPEND:
+                # Sirom ajoute des colonnes sans prévenir (organisme dans dt_rdv, 10/2026)
+                job_config.schema_update_options = [bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION]
             job = self.bq_client.load_table_from_json(rows_clean, table_ref, job_config=job_config)
             job.result()
 
@@ -289,7 +303,16 @@ class MySQLExtractor:
                 logger.info(f"\n--- [{i}/{len(tables)}] {table_name} ---")
                 try:
                     if table_name in INCREMENTAL_CONFIG:
-                        rows_loaded = self.extract_and_load_incremental(table_name)
+                        full_reload = _full_reload_requested()
+                        try:
+                            rows_loaded = self.extract_and_load_incremental(table_name, full_reload=full_reload)
+                        except Exception as e:
+                            # Changement de type côté Sirom (tarif100 STRING -> FLOAT, 10/2026) :
+                            # l'append est refusé, on repart d'une table neuve.
+                            if full_reload or 'Provided Schema does not match' not in str(e):
+                                raise
+                            logger.warning(f"⚠️  Schéma de '{table_name}' modifié côté source, rechargement complet : {e}")
+                            rows_loaded = self.extract_and_load_incremental(table_name, full_reload=True)
                         stats['success'] += 1
                         stats['total_records'] += rows_loaded
                     else:
