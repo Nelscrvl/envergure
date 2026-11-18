@@ -69,10 +69,13 @@ conventionne AS (
 -- (sortie avant la date prevue). Dedupliques par stagiaire x action, sinon une
 -- double inscription sur la meme action dupliquerait les seances a la jointure.
 abandons AS (
-    SELECT stg_stagiaire_id, id_action, MIN(date_abandon) AS date_abandon
+    SELECT *
     FROM {{ ref('int_inscrit_pilotage') }}
     WHERE date_abandon IS NOT NULL
-    GROUP BY 1, 2
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY stg_stagiaire_id, id_action
+        ORDER BY date_abandon, id_societe
+    ) = 1
 ),
 
 -- Interne / externe : champ para_sal_1 de la fiche Intervenant.
@@ -102,8 +105,11 @@ tarifs AS (
                  id_tarif_convention
     ) = 1
 )
+,
 
+lignes_seances AS (
 SELECT
+    'Séance'                                        AS type_ligne,
     -- Identifiants
     r.stagiaire_id,
     r.id_action,
@@ -137,15 +143,9 @@ SELECT
     r.heures_seance - r.heures_absence              AS heures_effectives,
     IF(r.heures_absence > 0, 1, 0)                  AS est_absent,
 
-    -- Abandon : porte par la DERNIERE seance du stagiaire sur l'action, donc compte
-    -- dans le mois ou il a cesse de venir. Une seule ligne par abandon : sommable.
-    -- Taux du mois = SUM(nb_abandons) / COUNT_DISTINCT(stagiaire_id).
+    -- L'abandon n'est plus porte par une seance : voir lignes_abandons.
     ab.date_abandon,
-    IF(ab.date_abandon IS NOT NULL
-       AND ROW_NUMBER() OVER (
-             PARTITION BY r.stagiaire_id, r.id_action
-             ORDER BY r.date_seance DESC, r.heure_debut DESC
-           ) = 1, 1, 0)                             AS nb_abandons,
+    0                                               AS nb_abandons,
 
     -- Heures formateur : une séance est suivie par N stagiaires, donc portée par N
     -- lignes ici. L'heure formateur n'est portée que par une seule d'entre elles,
@@ -208,3 +208,55 @@ LEFT JOIN tarifs t
 LEFT JOIN conventionne c
        ON  c.id_convention = CAST(r.convention_id         AS STRING)
        AND c.id_societe    = CAST(r.convention_id_societe AS STRING)
+),
+
+-- Abandons : une ligne dediee, datee du jour de l'abandon (sortie avant la date
+-- prevue, regle de int_inscrit_pilotage). Ils sont ainsi comptes dans le mois ou ils
+-- surviennent, meme sans seance ce mois-la, et le stagiaire fait partie de l'effectif
+-- du mois (valide le 18/11/2026). Auparavant l'abandon etait porte par la derniere
+-- seance : mauvais mois, et 41 abandons 2026 sur 58 absents faute de seance.
+-- Heures et CA a zero : ces lignes ne changent que nb_abandons et l'effectif.
+-- Taux du mois = SUM(nb_abandons) / COUNT_DISTINCT(stagiaire_id).
+lignes_abandons AS (
+SELECT
+    'Abandon'                                       AS type_ligne,
+    ab.stg_stagiaire_id                             AS stagiaire_id,
+    ab.id_action,
+    ab.id_societe,
+    ab.code_analytique_parcours,
+    ab.libelle_parcours,
+    ab.type_region,
+    ab.id_convention,
+    ab.conv_numero_financeur,
+    ab.conv_client_nom,
+    ab.date_abandon                                 AS date_seance,
+    DATE_TRUNC(ab.date_abandon, MONTH)              AS mois_seance,
+    EXTRACT(YEAR    FROM ab.date_abandon)           AS annee,
+    EXTRACT(MONTH   FROM ab.date_abandon)           AS mois,
+    EXTRACT(ISOWEEK FROM ab.date_abandon)           AS semaine,
+    CAST(NULL AS STRING)                            AS heure_debut,
+    CAST(NULL AS STRING)                            AS libelle_type_seance,
+    CAST(NULL AS BOOL)                              AS distancielle,
+    CAST(NULL AS STRING)                            AS type_absence_libelle,
+    CAST(ab.fr_formateur_id AS STRING)              AS intervenant_id,
+    ab.formateur_nom_complet,
+    COALESCE(ab.est_formateur_externe, FALSE)       AS est_formateur_externe,
+    0.0                                             AS heures_seance,
+    0.0                                             AS heures_absence,
+    0.0                                             AS heures_effectives,
+    0                                               AS est_absent,
+    ab.date_abandon,
+    1                                               AS nb_abandons,
+    0.0                                             AS heures_formateur,
+    ab.nom_type_tarif,
+    ab.prix_stagiaire_centre,
+    CAST(NULL AS NUMERIC)                           AS heures_conventionnees_groupe,
+    CAST(NULL AS FLOAT64)                           AS ca_heure_realisee,
+    CAST(NULL AS NUMERIC)                           AS ca_forfait_stagiaire,
+    CAST(NULL AS FLOAT64)                           AS ca_realise
+FROM abandons ab
+)
+
+SELECT * FROM lignes_seances
+UNION ALL
+SELECT * FROM lignes_abandons
