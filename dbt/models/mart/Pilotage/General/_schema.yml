@@ -21,3 +21,27 @@ models:
 
   - name: mrt_rdv
     description: "Table mart RDV lot/site agrégés (expose int_rdv_lot_site)."
+
+  - name: mrt_conversion_plateforme
+    description: >
+      Parcours mensuel des prestations proposées à France Travail (expose int_conversion_plateforme).
+      Créneaux "Réservé plateforme" de SI-Emploi : date passée = proposé non converti en bon de commande,
+      date future = encore ouvert. Dossiers : commandés par FT (date de démarrage) et réalisés (prestation
+      démarrée). Taux à calculer dans Looker sur les sommes :
+      conversion = dossiers_commandes / (dossiers_commandes + creneaux_non_convertis),
+      réalisation = dossiers_realises / dossiers_commandes.
+    columns:
+      - name: mois
+        description: "Premier jour du mois (date du créneau ou date de démarrage du dossier)."
+        tests: [not_null]
+      - name: marche_planifie_si_emploi
+        description: "Vrai si le marché est planifié en plages réservées (sinon pas de taux de conversion : ATR, VS2, SPR...)."
+      - name: creneaux_non_convertis
+        description: "Créneaux proposés à FT, date passée, non convertis en bon de commande."
+      - name: creneaux_ouverts
+        description: "Créneaux proposés à FT, date future, encore ouverts."
+      - name: dossiers_commandes
+        description: "Dossiers commandés par FT (lettre de commande), par mois de démarrage."
+      - name: dossiers_realises
+        description: "Dossiers dont la prestation a démarré (en cours, aboutie, sortie anticipée)."
+

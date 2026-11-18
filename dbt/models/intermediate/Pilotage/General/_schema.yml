@@ -7,3 +7,6 @@ models:
 
   - name: int_rdv_formateur
     description: "RDV par formateur."
+
+  - name: int_conversion_plateforme
+    description: "Créneaux Réservé plateforme (non convertis / ouverts) et dossiers commandés / réalisés, agrégés par mois, organisme, marché, région, lot, site et référent."
