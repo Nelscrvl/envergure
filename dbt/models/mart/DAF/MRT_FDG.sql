@@ -1,4 +1,6 @@
-{{ config(schema='2_mart') }}
+{# Mis de côté le 18/11/2026 : book_2026 n'est plus alimenté ni utilisé. Le modèle et sa table
+   sont conservés (données figées au 24/06/2026) ; retirer enabled=false pour le réactiver. #}
+{{ config(schema='2_mart', enabled=false) }}
 
 {# Consolidation FdG : ENV (book_2026) + ESO (BEN17).
    Long format avec code_rubrique (C123 total + C603/C604/C605 par famille). #}

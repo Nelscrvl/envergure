@@ -1,4 +1,6 @@
-{{ config(schema='2_mart') }}
+{# Mis de côté le 18/11/2026 : book_2026 n'est plus alimenté ni utilisé. Le modèle et sa table
+   sont conservés (données figées au 24/06/2026) ; retirer enabled=false pour le réactiver. #}
+{{ config(schema='2_mart', enabled=false) }}
 
 {# Coût des Services Rendus = MS_PROD + FDG + SOUS-TRAITANCE.
    Émet 1 ligne TOTAL par (codification_action × bu × mois) :

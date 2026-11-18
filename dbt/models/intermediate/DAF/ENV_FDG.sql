@@ -1,4 +1,6 @@
-{{ config(schema='2_intermediate') }}
+{# Mis de côté le 18/11/2026 : book_2026 n'est plus alimenté ni utilisé. Le modèle et sa table
+   sont conservés (données figées au 24/06/2026) ; retirer enabled=false pour le réactiver. #}
+{{ config(schema='2_intermediate', enabled=false) }}
 
 {# Frais de gestion Envergure (book_2026, colonnes mois_01..12) — long format.
    Mapping rubriques : C123 (total A+F+P) + C603 (A) / C604 (F) / C605 (P).
