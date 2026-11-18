@@ -50,7 +50,15 @@ models:
       SUM(heures_seance), qui multiplierait par l'effectif.
       ca_heure_realisee n'est renseigné que pour le tarif « Heure par stagiaire »
       (89 % des lignes) ; les forfaits ne sont pas ventilables à la séance.
+      Contient aussi une ligne par abandon (type_ligne = 'Abandon'), datée du jour
+      de l'abandon, avec heures et CA à zéro : les abandons sont comptés dans leur
+      mois et le stagiaire fait partie de l'effectif de ce mois.
+      Taux d'abandon du mois = SUM(nb_abandons) / COUNT_DISTINCT(stagiaire_id).
     columns:
+      - name: type_ligne
+        description: "'Séance' ou 'Abandon'. Filtrer sur 'Séance' pour ne compter que les stagiaires ayant eu une séance."
+      - name: nb_abandons
+        description: "1 sur la ligne d'abandon (datée du jour de l'abandon), 0 sur les séances."
       - name: stagiaire_id
         tests: [not_null]
       - name: date_seance

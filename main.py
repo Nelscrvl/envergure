@@ -16,6 +16,9 @@ import requests as _requests
 import google.auth
 import google.auth.transport.requests
 
+# Début de l'historique des présences Sofia (GetSeance)
+PRESENCES_DEPUIS = '2025-01-01'
+
 
 def _get_ssh_key(project_id: str) -> str:
     local_path = os.getenv('SSH_KEY_PATH')
@@ -112,8 +115,11 @@ def main():
         def _months_ago(d, n):
             total = d.year * 12 + (d.month - 1) - n
             return f"{total // 12}-{total % 12 + 1:02d}-01"
-        # GetSeance (présences) : fenêtre 6 mois glissants — rapide
-        sofia_start    = _months_ago(_d, 6)
+        # GetSeance (présences) : depuis une date fixe. Les tables Presence_Soc_* sont
+        # réécrites à chaque run : une fenêtre glissante faisait disparaître les mois
+        # anciens des tableaux par mois d'activité (validé le 18/11/2026 : historique
+        # conservé depuis le 01/01/2025). Appels mois par mois, limite Sofia de 31 jours.
+        sofia_start    = PRESENCES_DEPUIS
         # Inscrite : fenêtre 24 mois pour couvrir les parcours longs (AFC 12-18 mois)
         inscrite_start = _months_ago(_d, 24)
         sofia_stats = sofia_extractor.run(
