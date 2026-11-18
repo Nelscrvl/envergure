@@ -39,7 +39,9 @@ FROM {{ref("int_union_all_prime")}}
 
 SELECT
 r.*,
-b.id_benef
+b.id_benef,
+-- le LC n'existe que dans une instance : on garde laquelle pour les jointures aval
+b.instance
 FROM rename as r 
 LEFT JOIN {{ref("stg_benef")}} as b
 on r.LC = b.numero_commande

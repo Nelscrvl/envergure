@@ -23,15 +23,18 @@ REGEXP_REPLACE(lot, r'_', ' ') AS lot_norm,
 COALESCE(
   -- paire de départements en fin de lot ("...DD/DD")
   REGEXP_EXTRACT(lot, r'(\d{2})/\d{2}\s*$'),
+  -- convention SOLERYS depuis 10/2026 : "MARCHE DD[-DD...] CODE" (ex. "UES 83 16890", "ATR 14-50 17254")
+  REGEXP_EXTRACT(lot, r'^\S+\s+(\d{2})(?:-\d{2})*\s+\d{5}\s*$'),
   -- département unique après le dernier underscore, convention PPAIP_LOT n_DD uniquement
   CASE WHEN REGEXP_CONTAINS(lot, r'(?i)^PPAIP') THEN REGEXP_EXTRACT(lot, r'_(\d{2})\s*$') END,
   -- sinon département du bénéficiaire
   SUBSTR(LPAD(TRIM(cp_benef), 5, '0'), 1, 2)
 ) AS dept_code,
+-- marché calculé en staging (seed_marche) ; lot vide -> code marché de la LC
 CASE
-  WHEN split(lot, ' ')[safe_offset(0)] = ''
+  WHEN marche = ''
   THEN SUBSTR(numero_commande, 3, 3)
-  ELSE split(lot, ' ')[safe_offset(0)]
+  ELSE marche
 END AS marche,
 COALESCE(
   -- P1 : mot-clé LOT explicite (LOT 3, LOT_3, LOT3, LOT100, _Lot 3_, etc.)
@@ -66,6 +69,7 @@ SELECT
       WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bMARTINIQUE\b')                           THEN 'MARTINIQUE'
       WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bRÉUNION\b|\bREUNION\b|\bRN\b')          THEN 'REUNION'
       WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bRM\b')                                   THEN 'REUNION-MARTINIQUE'  -- à confirmer avec métier
+      WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bGUYANE\b')                               THEN 'GUYANE'
 
       -- Patterns multi-mots en premier (avant les abbréviations courtes)
       WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bGRAND[\s_-]?EST\b|\bCHAMPAGNE\b|\bLORRAINE\b|\bALSACE\b|\bMARNE\b') THEN 'GRAND EST'
@@ -76,6 +80,7 @@ SELECT
       WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bSEINE[\s-]MARITIME\b|\bNORMANDIE\b')   THEN 'NORMANDIE'
       WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bAUVERGNE\b')                            THEN 'AUVERGNE-RHONE-ALPES'
       WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bPAYS[\s-]DE[\s-]LA[\s-]LOIRE\b')       THEN 'PAYS DE LA LOIRE'
+      WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bOCCITANIE\b')                            THEN 'OCCITANIE'
 
       -- Abréviations courtes (word boundary \b essentiel ; lot_norm remplace les underscores par des
       -- espaces pour que \b fonctionne aussi sur "CVL_Lot", "HN_LOT", "BG_Lot", "_HDF", etc.)
@@ -90,6 +95,11 @@ SELECT
       WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bNAQ\b')                                  THEN 'NOUVELLE-AQUITAINE'
       WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bAURA\b|\bARA\b')                        THEN 'AUVERGNE-RHONE-ALPES'
       WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bCVL\b|\bCENTRE\b')                      THEN 'CENTRE-VAL DE LOIRE'
+      -- abréviations des lots Sirom depuis 10/2026 (UES_OCC_34_..., UES_CORSE_7_...)
+      WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bOCC\b')                                  THEN 'OCCITANIE'
+      WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bCORSE\b')                                THEN 'CORSE'
+      WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bBZH\b')                                  THEN 'BRETAGNE'
+      WHEN REGEXP_CONTAINS(lot_norm, r'(?i)\bAOS\b|\bAISNE\b|\bOISE\b|\bSOMMES?\b')    THEN 'HAUTS-DE-FRANCE'
 
       -- Fallback département (01-95 + Corse) : dept_code priorise le département déduit du lot (paire
       -- "DD/DD" en fin de chaîne, ou convention PPAIP_LOT n_DD), sinon celui du bénéficiaire (cp_benef)
@@ -245,6 +255,7 @@ p.nb_pmsmp
 FROM ajout_note as an
 LEFT JOIN {{(ref("int_pmsmp"))}} as p
 ON an.id_benef = p.id_benef
+AND an.instance = p.instance
 )
 
 SELECT

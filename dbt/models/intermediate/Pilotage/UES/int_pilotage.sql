@@ -1,5 +1,6 @@
 WITH prep_data AS ( 
     SELECT
+instance,
 id_benef,
 nom,
 ide,
@@ -10,7 +11,7 @@ id_ref_principal,
 date_demarrage,
 date_fin_theo,
 date_fin_prest,
-split(lot, ' ')[safe_offset(0)] as marche,
+marche,
 split(lot, ' ')[safe_offset(1)] as region,
 split(lot, ' ')[safe_offset(2)] as lot_unique,
 trim(substr(lot, strpos(lot, ' ') + 1)) as lot_sans_action,
@@ -102,3 +103,4 @@ END AS retour_emploi_env_semap
 FROM classification AS s
 LEFT JOIN {{ref("int_prime")}} as p
 ON s.id_benef = p.id_benef
+AND s.instance = p.instance

@@ -17,6 +17,7 @@ COUNT(p.id_benef) AS nb_de_present
 FROM {{ref('int_atr_pilotage')}} as p
 LEFT JOIN {{ref("stg_facture")}} as f
 ON p.id_benef = f.id_benef
+AND p.instance = f.instance
 WHERE recu = 1
 GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12
 )

@@ -6,9 +6,9 @@ SELECT
   pg.organisme,
   pg.numero_commande,
 CASE
-  WHEN split(pg.lot, ' ')[safe_offset(0)] = ''
+  WHEN pg.marche = ''
   THEN SUBSTR(pg.numero_commande, 3, 3)
-  ELSE split(pg.lot, ' ')[safe_offset(0)]
+  ELSE pg.marche
 END AS marche,
 CASE
   -- Outre-mer (noms uniques, pas d'ambiguïté)

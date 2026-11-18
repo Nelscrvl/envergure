@@ -1,5 +1,6 @@
 WITH slct_column AS (
     SELECT
+instance,
 id_benef,
 referent,
 date_demarrage,
@@ -14,7 +15,7 @@ site,
 
 
 FROM {{ref("int_pilotage")}} 
-GROUP BY id_benef, referent, date_demarrage, date_fin_prest, marche, region, lot_unique, organisme, statut, situation,site
+GROUP BY instance, id_benef, referent, date_demarrage, date_fin_prest, marche, region, lot_unique, organisme, statut, situation,site
 
 )
 
@@ -29,5 +30,6 @@ f.numero_commande
 FROM slct_column as s
 LEFT JOIN {{ref("int_facture")}} as f
 ON s.id_benef = f.id_benef
+AND s.instance = f.instance
 
 
