@@ -8,8 +8,9 @@ FROM {{ref("stg_pmsmp")}}
 )
 
 SELECT
+instance,
 id_benef,
 SUM(nb_heures) AS total_nb_heure,
 SUM(nb_pmsmp) AS nb_pmsmp
-FROM new_col 
-GROUP BY id_benef
+FROM new_col
+GROUP BY instance, id_benef

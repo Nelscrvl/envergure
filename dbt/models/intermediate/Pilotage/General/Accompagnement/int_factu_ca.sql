@@ -1,5 +1,6 @@
 WITH benef_coll AS (
   SELECT
+    instance,
     id_presta_coll,
     ANY_VALUE(marche)          AS marche,
     ANY_VALUE(lot_unique)      AS lot_unique,
@@ -11,7 +12,7 @@ WITH benef_coll AS (
     ANY_VALUE(site)            AS site
   FROM {{ ref('int_pilotage_global') }}
   WHERE id_presta_coll IS NOT NULL
-  GROUP BY id_presta_coll
+  GROUP BY instance, id_presta_coll
 ),
 
 prep_data AS (
@@ -31,8 +32,10 @@ SELECT
 FROM {{ref('stg_facture')}} AS f
 LEFT JOIN {{ref('int_pilotage_global')}} AS pg
   ON f.id_benef = pg.id_benef
+  AND f.instance = pg.instance
 LEFT JOIN benef_coll AS bc
   ON f.id_presta_coll = bc.id_presta_coll
+  AND f.instance = bc.instance
 
 ),
 

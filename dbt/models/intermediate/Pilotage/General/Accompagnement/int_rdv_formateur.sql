@@ -1,5 +1,6 @@
 WITH jointure AS (
-    SELECT 
+    SELECT
+rdv.instance,
 rdv.id_benef,
 id_rdv,
 date_deb,
@@ -21,15 +22,17 @@ CASE
     WHEN present IS NULL THEN "a catégoriser"
 ELSE "" 
 END AS presence,
-split(rdv.lot, ' ')[offset(0)] as marche,
+rdv.marche,
 rdv.lot as lot,
 trim(substr(rdv.lot, strpos(rdv.lot, ' ') + 1)) as lot_sans_action,
-organisme,
+benef.organisme,
 precision_rdv
 
 FROM {{ref("stg_rdv")}} as rdv
 LEFT JOIN {{ref("stg_benef")}} as benef
 ON rdv.id_benef = benef.id_benef
+-- id_benef n'est unique qu'au sein d'une instance SI-Emploi
+AND rdv.instance = benef.instance
 
 ),
 
@@ -48,8 +51,9 @@ FROM jointure
 )
 
 
-SELECT 
+SELECT
 COUNT(id_benef) AS nb_de_personne_presente,
+instance,
 id_benef,
 date_deb,
 date_fin,
@@ -71,6 +75,7 @@ precision_rdv,
 suivi
 FROM granularite
 GROUP BY date_deb,
+instance,
 id_benef,
 date_fin,
 type,

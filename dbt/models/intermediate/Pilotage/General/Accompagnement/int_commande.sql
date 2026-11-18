@@ -14,7 +14,7 @@ SELECT
   PARSE_DATE('%Y-%m-%d', LEFT(date_fin, 10)) AS date_fin_prest,
   CAST(NULL AS INT64) AS id_presta_coll,
   lot,
-  split(lot, ' ')[safe_offset(0)] AS marche,
+  marche,
   CASE
     -- Outre-mer (noms uniques, pas d'ambiguïté)
     WHEN REGEXP_CONTAINS(lot, r'(?i)\bMAYOTTE\b')                              THEN 'MAYOTTE'
@@ -22,6 +22,7 @@ SELECT
     WHEN REGEXP_CONTAINS(lot, r'(?i)\bMARTINIQUE\b')                           THEN 'MARTINIQUE'
     WHEN REGEXP_CONTAINS(lot, r'(?i)\bRÉUNION\b|\bREUNION\b|\bRN\b')          THEN 'REUNION'
     WHEN REGEXP_CONTAINS(lot, r'(?i)\bRM\b')                                   THEN 'REUNION-MARTINIQUE'
+    WHEN REGEXP_CONTAINS(lot, r'(?i)\bGUYANE\b')                               THEN 'GUYANE'
 
     -- Patterns multi-mots en premier (avant les abbréviations courtes)
     WHEN REGEXP_CONTAINS(lot, r'(?i)\bGRAND[\s_-]?EST\b|\bCHAMPAGNE\b|\bLORRAINE\b|\bALSACE\b') THEN 'GRAND EST'
@@ -32,6 +33,7 @@ SELECT
     WHEN REGEXP_CONTAINS(lot, r'(?i)\bSEINE[\s-]MARITIME\b|\bNORMANDIE\b')   THEN 'NORMANDIE'
     WHEN REGEXP_CONTAINS(lot, r'(?i)\bAUVERGNE\b')                            THEN 'AUVERGNE-RHONE-ALPES'
     WHEN REGEXP_CONTAINS(lot, r'(?i)\bPAYS[\s-]DE[\s-]LA[\s-]LOIRE\b')       THEN 'PAYS DE LA LOIRE'
+    WHEN REGEXP_CONTAINS(lot, r'(?i)\bOCCITANIE\b')                            THEN 'OCCITANIE'
 
     -- Abréviations courtes (word boundary \b essentiel)
     WHEN REGEXP_CONTAINS(lot, r'(?i)\bGDEST\b|\bGE\b')                        THEN 'GRAND EST'
@@ -45,6 +47,11 @@ SELECT
     WHEN REGEXP_CONTAINS(lot, r'(?i)\bNAQ\b')                                  THEN 'NOUVELLE-AQUITAINE'
     WHEN REGEXP_CONTAINS(lot, r'(?i)\bAURA\b|\bARA\b')                        THEN 'AUVERGNE-RHONE-ALPES'
     WHEN REGEXP_CONTAINS(lot, r'(?i)\bCVL\b|\bCENTRE\b')                      THEN 'CENTRE-VAL DE LOIRE'
+    -- abréviations des lots Sirom depuis 10/2026 (UES_OCC_34_..., UES_CORSE_7_...)
+    WHEN REGEXP_CONTAINS(lot, r'(?i)\bOCC\b')                                  THEN 'OCCITANIE'
+    WHEN REGEXP_CONTAINS(lot, r'(?i)\bCORSE\b')                                THEN 'CORSE'
+    WHEN REGEXP_CONTAINS(lot, r'(?i)\bBZH\b')                                  THEN 'BRETAGNE'
+    WHEN REGEXP_CONTAINS(lot, r'(?i)\bAOS\b|\bAISNE\b|\bOISE\b|\bSOMMES?\b')    THEN 'HAUTS-DE-FRANCE'
     ELSE NULL
   END AS region,
   COALESCE(

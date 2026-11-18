@@ -1,5 +1,6 @@
 WITH ca AS (
     SELECT
+        instance,
         id_benef,
         referent,
         date_demarrage,
@@ -15,12 +16,13 @@ WITH ca AS (
         SUM(montant_HT) AS CA_HT_total,
         SUM(montant_TVA) AS CA_TVA_total
     FROM {{ ref("int_formateur_Ca") }}
-    GROUP BY id_benef, referent, date_demarrage, date_fin_prest, marche, lot_unique, organisme, statut, situation, site
+    GROUP BY instance, id_benef, referent, date_demarrage, date_fin_prest, marche, lot_unique, organisme, statut, situation, site
 
 ),
 
 prime AS (
     SELECT
+        instance,
         id_benef,
         Montant_prime,
         Date_primes
@@ -33,4 +35,4 @@ SELECT
     p.Date_primes,
     EXTRACT(MONTH FROM CAST(date_facture AS TIMESTAMP)) AS mois_num
 FROM ca
-LEFT JOIN prime AS p ON ca.id_benef = p.id_benef
+LEFT JOIN prime AS p ON ca.id_benef = p.id_benef AND ca.instance = p.instance

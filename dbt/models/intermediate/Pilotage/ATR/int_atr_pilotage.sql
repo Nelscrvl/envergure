@@ -1,6 +1,7 @@
 WITH  prep_data AS (
 
 SELECT
+instance,
 id_benef,
 nom,
 ide,
@@ -12,7 +13,7 @@ date_demarrage,
 date_fin_theo,
 date_fin_prest,
 numero_commande,
-split(lot, ' ')[safe_offset(0)] as marche,
+marche,
 split(lot, ' ')[safe_offset(1)] as region,
 split(lot, ' ')[safe_offset(2)] as lot_unique,
 trim(substr(lot, strpos(lot, ' ') + 1)) as lot_sans_action,
@@ -47,7 +48,8 @@ TIMESTAMP_DIFF(CAST(r.date_fin AS TIMESTAMP),CAST(r.date_deb AS TIMESTAMP),HOUR)
 FROM prep_data as pd 
 LEFT JOIN {{ref('stg_rdv')}} as r
 ON pd.id_benef = r.id_benef
-WHERE marche ="ATR"
+AND pd.instance = r.instance
+WHERE pd.marche ="ATR"
 
 ),
 
@@ -94,9 +96,9 @@ FROM KPI
 ),
 
 facture_dedup AS (
-    SELECT id_presta_coll, MAX(date_facture) AS date_facture, MAX(montant_HT) AS montant_HT
+    SELECT instance, id_presta_coll, MAX(date_facture) AS date_facture, MAX(montant_HT) AS montant_HT
     FROM {{ref('stg_facture')}}
-    GROUP BY id_presta_coll
+    GROUP BY instance, id_presta_coll
 ),
 
 jointure_facture AS (
@@ -110,6 +112,7 @@ jointure_facture AS (
     FROM creation_rang AS c
     LEFT JOIN facture_dedup AS f
     ON c.id_presta_coll = f.id_presta_coll
+    AND c.instance = f.instance
 )
 
 --final AS (

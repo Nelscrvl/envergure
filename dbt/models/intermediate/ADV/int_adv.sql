@@ -1,5 +1,6 @@
 WITH prep_data AS ( 
     SELECT
+instance,
 id_benef,
 nom,
 ide,
@@ -10,7 +11,7 @@ id_ref_principal,
 date_demarrage,
 date_fin_theo,
 date_fin_prest,
-split(lot, ' ')[offset(0)] as marche,
+marche,
 lot,
 trim(substr(lot, strpos(lot, ' ') + 1)) as lot_sans_action,
 site,
@@ -47,8 +48,9 @@ FROM prep_data
 
 SELECT 
 stg_facture.*,
-catego.*EXCEPT(id_benef),
+catego.*EXCEPT(id_benef, instance),
 date_diff(date_facture,date_fin_prest, DAY) AS nb_jour_fin_presta_paiment
 FROM {{ref("stg_facture")}}
 FULL JOIN catego
 on catego.id_benef = stg_facture.id_benef
+and catego.instance = stg_facture.instance

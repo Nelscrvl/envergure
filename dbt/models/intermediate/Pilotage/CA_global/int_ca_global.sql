@@ -7,4 +7,5 @@ p.Date_primes
 FROM {{ref("int_formateur_Ca")}} as f
 LEFT JOIN {{ref("int_pilotage_prime")}} as p
 ON f.id_benef = p.id_benef
+AND f.instance = p.instance
 WHERE montant_HT >0

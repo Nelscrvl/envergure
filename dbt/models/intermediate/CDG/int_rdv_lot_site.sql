@@ -18,14 +18,16 @@ CASE
     WHEN present IS NULL THEN "a catégoriser"
 ELSE "" 
 END AS presence,
-split(rdv.lot, ' ')[offset(0)] as marche,
+rdv.marche,
 rdv.lot as lot,
 trim(substr(rdv.lot, strpos(rdv.lot, ' ') + 1)) as lot_sans_action,
-organisme
+benef.organisme
 
 FROM {{ref("stg_rdv")}} as rdv
 LEFT JOIN {{ref("stg_benef")}} as benef
 ON rdv.id_benef = benef.id_benef
+-- id_benef n'est unique qu'au sein d'une instance SI-Emploi
+AND rdv.instance = benef.instance
 
 ),
 

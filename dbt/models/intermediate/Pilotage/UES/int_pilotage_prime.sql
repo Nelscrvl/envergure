@@ -1,5 +1,6 @@
 WITH prep_data AS ( 
     SELECT
+instance,
 id_benef,
 nom,
 ide,
@@ -10,7 +11,7 @@ id_ref_principal,
 date_demarrage,
 date_fin_theo,
 date_fin_prest,
-split(lot, ' ')[safe_offset(0)] as marche,
+marche,
 split(lot, ' ')[safe_offset(1)] as region,
 split(lot, ' ')[safe_offset(2)] as lot_unique,
 trim(substr(lot, strpos(lot, ' ') + 1)) as lot_sans_action,
@@ -103,7 +104,7 @@ prime_unique AS (
     SELECT 
       b.*,
       ROW_NUMBER() OVER (
-        PARTITION BY id_benef 
+        PARTITION BY instance, id_benef 
         ORDER BY Date_primes ASC
       ) as rn
     FROM {{ref("int_referent_rdv_ca")}} b
@@ -123,3 +124,4 @@ SELECT
 FROM classification c
 LEFT JOIN prime_unique p
   ON c.id_benef = p.id_benef
+  AND c.instance = p.instance
