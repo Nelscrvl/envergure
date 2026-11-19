@@ -16,7 +16,8 @@ import requests as _requests
 import google.auth
 import google.auth.transport.requests
 
-# Début de l'historique des présences Sofia (GetSeance)
+# Début de l'historique des présences Sofia (GetSeance). Repris en dur dans
+# int_presence_stagiaire (abandons) : modifier les deux ensemble.
 PRESENCES_DEPUIS = '2025-01-01'
 
 

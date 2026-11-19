@@ -217,6 +217,9 @@ LEFT JOIN conventionne c
 -- seance : mauvais mois, et 41 abandons 2026 sur 58 absents faute de seance.
 -- Heures et CA a zero : ces lignes ne changent que nb_abandons et l'effectif.
 -- Taux du mois = SUM(nb_abandons) / COUNT_DISTINCT(stagiaire_id).
+-- Limites au debut de l'historique des presences (PRESENCES_DEPUIS dans main.py) :
+-- avant cette date il n'y a aucune seance, l'effectif du mois se reduirait aux
+-- abandons et le taux vaudrait 100 %.
 lignes_abandons AS (
 SELECT
     'Abandon'                                       AS type_ligne,
@@ -255,6 +258,7 @@ SELECT
     CAST(NULL AS NUMERIC)                           AS ca_forfait_stagiaire,
     CAST(NULL AS FLOAT64)                           AS ca_realise
 FROM abandons ab
+WHERE ab.date_abandon >= DATE '2025-01-01'
 )
 
 SELECT * FROM lignes_seances
