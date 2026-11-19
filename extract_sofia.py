@@ -65,6 +65,10 @@ def format_date_for_societe(date_str: str, id_societe: int) -> str:
     """
     IDSociete 1 et 2 : format normal AAAA-MM-JJ
     IDSociete 3 : format inversé AAAA-JJ-MM
+
+    N'est plus utilisé que pour Inscrite_Soc_3. Sofia y lit la date de début
+    inversée comme un autre jour (2024-01-11 au lieu du 01/11/2024), ce qui élargit
+    la fenêtre d'environ 10 mois : la changer retirerait ~1 300 inscriptions.
     """
     if id_societe == 3:
         dt = datetime.strptime(date_str, '%Y-%m-%d')
@@ -75,7 +79,7 @@ def format_date_for_societe(date_str: str, id_societe: int) -> str:
 def build_sofia_endpoints(start_date: str, end_date: str, inscrite_start_date: str = None) -> List[Dict]:
     """Construit la liste complète des endpoints Sofia à extraire.
 
-    start_date          : fenêtre GetSeance (présences) — typiquement 6 mois glissants
+    start_date          : début de la fenêtre GetSeance (présences), PRESENCES_DEPUIS dans main.py
     inscrite_start_date : fenêtre Inscrite — typiquement 24 mois pour couvrir les AFC longs
     """
     if inscrite_start_date is None:
@@ -83,14 +87,13 @@ def build_sofia_endpoints(start_date: str, end_date: str, inscrite_start_date: s
     monthly_periods = generate_monthly_periods(start_date, end_date)
     endpoints = []
 
+    # GetSeance attend le format normal pour les trois sociétés (testé le 19/11/2026).
+    # Avec l'ancien format inversé, Sofia ignorait les dates et renvoyait à chaque
+    # mois les mêmes séances (du mois en cours à +1 an).
     for period in monthly_periods:
         endpoints.append({
             "endpoint": "/SofiaEDC/API/PresenceSta/GetSeance",
-            "params": {
-                "IDSociete": 3,
-                "debut": format_date_for_societe(period['Debut'], 3),
-                "fin": format_date_for_societe(period['Fin'], 3)
-            },
+            "params": {"IDSociete": 3, "Debut": period['Debut'], "Fin": period['Fin']},
             "table": "Presence_Soc_3",
             "stringify": True
         })
