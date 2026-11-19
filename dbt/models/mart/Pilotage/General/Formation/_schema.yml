@@ -52,7 +52,8 @@ models:
       (89 % des lignes) ; les forfaits ne sont pas ventilables à la séance.
       Contient aussi une ligne par abandon (type_ligne = 'Abandon'), datée du jour
       de l'abandon, avec heures et CA à zéro : les abandons sont comptés dans leur
-      mois et le stagiaire fait partie de l'effectif de ce mois.
+      mois et le stagiaire fait partie de l'effectif de ce mois. Uniquement à partir
+      du 01/01/2025, début de l'historique des présences.
       Taux d'abandon du mois = SUM(nb_abandons) / COUNT_DISTINCT(stagiaire_id).
     columns:
       - name: type_ligne
