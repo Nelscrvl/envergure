@@ -51,6 +51,11 @@ noms_intervenants AS (
 ),
 
 -- Déduplication : une séance par (formateur × action × date × heure_debut)
+-- Une même séance peut remonter de plusieurs sociétés (les séances de la Soc_3 sont
+-- toutes aussi en Soc_2 ou Soc_4) : on ne garde que la société prioritaire,
+-- Soc_2 > Soc_3 > Soc_4, comme int_presence_stagiaire.
+-- Les variantes d'une même société (parcours ou durée différents selon le
+-- stagiaire) sont conservées telles quelles.
 sessions AS (
     SELECT DISTINCT
         CAST(intervenant_id AS STRING)  AS intervenant_id,
@@ -63,6 +68,9 @@ sessions AS (
     FROM union_presence
     WHERE intervenant_id IS NOT NULL
       AND duree_seance IS NOT NULL
+    QUALIFY CAST(id_societe AS INT64) = MIN(CAST(id_societe AS INT64)) OVER (
+        PARTITION BY intervenant_id, id_action, date_date, heure_debut
+    )
 )
 
 SELECT
