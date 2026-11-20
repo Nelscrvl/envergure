@@ -160,3 +160,21 @@ gcloud secrets add-iam-policy-binding <nom-secret> \
   --member="serviceAccount:extraction-runner@dynamic-camp-465312-b6.iam.gserviceaccount.com" \
   --role="roles/secretmanager.secretAccessor"
 ```
+
+## 7. Fonction `gsheet-colonnes` (Cloud Run function)
+
+Liste les onglets d'un Google Sheet et leurs en-têtes, sans renvoyer de données
+(par défaut : Sheet de satisfaction des demandeurs d'emploi). Le Sheet doit être
+partagé en lecture avec `extraction-runner@dynamic-camp-465312-b6.iam.gserviceaccount.com`.
+
+```bash
+# Déploiement (privé, sans accès public)
+gcloud run deploy gsheet-colonnes --source functions/gsheet_colonnes \
+  --function colonnes --base-image python312 --region europe-west1 \
+  --no-allow-unauthenticated \
+  --service-account extraction-runner@dynamic-camp-465312-b6.iam.gserviceaccount.com
+
+# Appel (paramètre optionnel ?id=<spreadsheet_id> pour un autre Sheet)
+curl -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
+  https://gsheet-colonnes-694199966886.europe-west1.run.app
+```
